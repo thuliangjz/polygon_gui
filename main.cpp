@@ -3,6 +3,10 @@
 #include "polygon_manager.h"
 #include <QDebug>
 #include <algorithm>
+#include <list>
+
+using std::list;
+
 int main(int argc, char *argv[])
 {
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);

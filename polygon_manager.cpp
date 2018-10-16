@@ -7,7 +7,6 @@
 
 PolygonManager::PolygonManager(QQuickItem *parent): QQuickPaintedItem (parent)
 {
-
 }
 
 void PolygonManager::paint(QPainter *painter){
@@ -56,5 +55,6 @@ QString PolygonManager::new_polygon_by_string(QString input){
     QString res = plg.init(vtx_description);
     if(res == "ok")
         m_polygons.push_back(plg);
+
     return res;
 }

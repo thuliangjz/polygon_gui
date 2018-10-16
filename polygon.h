@@ -16,6 +16,8 @@ public:
     Polygon();
     QString init(const plg_vertexs& vertexes);
     void paint(QPainter* painter, pair<float, float> translate, float scale);
+    vector<plg_vertexs> clip(const Polygon& plg);
+    plg_vertexs get_vertex_copy()const;
 private:
     QPixmap paint_local_img(const plg_vertexs& vtxs_view, pair<int, int>& pt_belt);
 private:

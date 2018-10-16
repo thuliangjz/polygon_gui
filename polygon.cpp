@@ -10,6 +10,19 @@ double get_winding(pair<T, T> pt,const vector<pair<T, T>>& vtxs);
 template <typename T>
 inline T get_online_indicator(pair<pair<T, T>, pair<T, T>> line, pair<T, T> pt);
 
+pair<int, int> line_seg_intersect(const pair<int, int>& p1,
+                                  const pair<int, int>& p2,
+                                  const pair<int, int>& p3,
+                                  const pair<int, int>& p4,
+                                  bool& valid, bool& is_enter, double& t);
+template <typename T>
+inline int round(T x);
+
+int get_cnt_ctx(plg_vertexs& vtxs);
+
+pair<double, double> get_inner_point(const vector<pair<int, int>>& loop, bool& succeed);
+float get_signed_area(const vector<pair<int, int>>& loop);
+
 Polygon::Polygon():
     m_color_edge(0, 0, 0),
     m_color_inside(0, 0, 255)
@@ -350,4 +363,264 @@ QPixmap Polygon::paint_local_img(const plg_vertexs& vtxs_view, pair<int, int>&pt
         }
     }
     return pixmap;
+}
+
+plg_vertexs Polygon::get_vertex_copy()const{
+    return m_vertex;
+}
+
+int get_cnt_ctx(plg_vertexs& vtxs){
+    int cnt = 0;
+    for(auto &loop:vtxs){
+        cnt += loop.size();
+    }
+    return cnt;
+}
+
+
+vector<plg_vertexs> Polygon::clip(const Polygon& plg){
+    //this指向多边形作为裁剪多边形（窗口）
+    plg_vertexs vertexs_main_plg = plg.get_vertex_copy(), vertexs_clip_plg = this->m_vertex;
+    //逐边求交并对交点按照环绕顺序进行排序, 构建vec_intersect_main, vec_intersect_clip, id_intersect在结束时表示交点的总量
+    struct intersect_vector_entry{
+        pair<int, int> pt;    //由于舍入带来的误差可能导致最终得到的裁剪多边形不是一个合格的格点多边形
+        int id;
+        bool is_enter;
+        double t;
+        //intersect_vector_entry(){}
+        intersect_vector_entry(pair<int, int> pt, int id, bool i_e, double t):pt(pt), id(id), is_enter(i_e), t(t){}
+    };
+    struct {
+        bool operator() (intersect_vector_entry e1, intersect_vector_entry e2){return e1.t < e2.t;}
+    }i_v_e_cmp;
+    int cnt_vtx_main = get_cnt_ctx(vertexs_main_plg), cnt_vtx_clip = get_cnt_ctx(vertexs_clip_plg);
+    vector<vector<intersect_vector_entry>> vec_intersect_main(cnt_vtx_main), vec_intersect_clip(cnt_vtx_clip);
+    for(auto &loop:vertexs_clip_plg){
+        loop.push_back(loop.front());
+    }
+    for(auto &loop:vertexs_main_plg){
+        loop.push_back(loop.front());
+    }
+    int idx_vertex_main = 0;
+    int id_intersect = 0;
+    for(auto &loop_main:vertexs_main_plg){
+        for(int i = 0; i < loop_main.size() - 1; ++i, ++idx_vertex_main){
+            int idx_vertex_clip = 0;
+            for(auto &loop_clip:vertexs_clip_plg){
+                for(int j = 0; j < loop_clip.size() - 1; ++j, ++idx_vertex_clip){
+                    bool valid, is_enter;
+                    double t = 0;
+                    pair<int, int> intersect = line_seg_intersect(loop_main[i], loop_main[i + 1],
+                            loop_clip[j], loop_clip[j + 1], valid, is_enter, t);
+                    if(valid){
+                        vec_intersect_main[idx_vertex_main].push_back(intersect_vector_entry(intersect, id_intersect, is_enter, t));
+                        vec_intersect_clip[idx_vertex_clip].push_back(intersect_vector_entry(intersect, id_intersect, is_enter, t));
+                        ++id_intersect;
+                    }
+                }
+            }
+        }
+    }
+    for(auto &vec_intersect:vec_intersect_main)
+        std::sort(vec_intersect.begin(), vec_intersect.end(), i_v_e_cmp);
+    for(auto &vec_intersect:vec_intersect_clip)
+        std::sort(vec_intersect.begin(), vec_intersect.end(), i_v_e_cmp);
+    for(auto &loop:vertexs_clip_plg)
+        loop.pop_back();
+    for(auto &loop:vertexs_main_plg)
+        loop.pop_back();
+    //构建顶点列表
+    struct intersect_list_entry{
+        bool is_vertex;
+        bool is_enter;
+        bool is_traversed;
+        bool is_loop_last;  //为true时表明需要通过it_loop_head回到这个环的开头
+        list<intersect_list_entry>::iterator it_dual;
+        list<intersect_list_entry>::iterator it_loop_head;
+        pair<int, int> pt;
+        list<list<intersect_list_entry>::iterator>::iterator it_lst_left;
+        intersect_list_entry(pair<int, int> pt, bool i_v=false):is_vertex(i_v), is_traversed(false), is_loop_last(false), pt(pt){}
+    };
+    list<list<intersect_list_entry>::iterator> lst_intersects_left;   //指向主多边形链表
+    vector<list<intersect_list_entry>::iterator> dual_it_table(id_intersect);
+    vector<list<list<intersect_list_entry>::iterator>::iterator> lst_left_it_table(id_intersect);   //在构建主多边形表过程中填写
+    list<intersect_list_entry> lst_all_vertex_main, lst_all_vertex_clip;
+    idx_vertex_main = 0;
+    for(auto &loop : vertexs_main_plg){
+        bool first_it_written = false;
+        list<intersect_list_entry>::iterator it_loop_head;
+        for(auto &pt : loop){
+            lst_all_vertex_main.push_back(intersect_list_entry(pt, true));
+            it_loop_head = !first_it_written ? std::next(lst_all_vertex_main.end(), -1) : it_loop_head;
+            first_it_written = true;
+            for(auto & intersect:vec_intersect_main[idx_vertex_main]){
+                lst_all_vertex_main.push_back(intersect_list_entry(intersect.pt));
+                auto &last = lst_all_vertex_main.back();
+                auto it_last = std::next(lst_all_vertex_main.end(), -1);
+                last.is_enter = intersect.is_enter;
+                lst_intersects_left.push_back(it_last);
+                lst_left_it_table[intersect.id] = std::next(lst_intersects_left.end(), -1); //记录lst_intersects_left指向它的指针
+                last.it_lst_left = std::next(lst_intersects_left.end(), -1);
+                dual_it_table[intersect.id] = it_last;
+            }
+            ++idx_vertex_main;
+        }
+        lst_all_vertex_main.back().is_loop_last = true;
+        lst_all_vertex_main.back().it_loop_head = it_loop_head;
+    }
+    int idx_vertex_clip = 0;
+    for(auto &loop : vertexs_clip_plg){
+        bool first_it_written = false;
+        list<intersect_list_entry>::iterator it_loop_head;
+        for(auto &pt : loop){
+            lst_all_vertex_clip.push_back(intersect_list_entry(pt, true));
+            it_loop_head = !first_it_written ? std::next(lst_all_vertex_clip.end(), -1) : it_loop_head;
+            first_it_written = true;
+            for(auto &intersect : vec_intersect_clip[idx_vertex_clip]){
+                lst_all_vertex_clip.push_back(intersect_list_entry(intersect.pt));
+                auto &last = lst_all_vertex_clip.back();
+                auto it_last = std::next(lst_all_vertex_clip.end(), -1);
+                last.is_enter = intersect.is_enter;
+                last.it_lst_left = lst_left_it_table[intersect.id]; //建立table的作用
+                last.it_dual = dual_it_table[intersect.id]; //建立table的作用
+                dual_it_table[intersect.id]->it_dual = it_last;
+            }
+            ++idx_vertex_clip;
+        }
+        lst_all_vertex_clip.back().is_loop_last = true;
+        lst_all_vertex_clip.back().it_loop_head = it_loop_head;
+    }//顶点列表构建完成
+    //至此，lst_all_vertex_clip和lst_all_vertex_main代表了原始算法中的顶点列表，lst_left_it_table中保留了剩下的交点迭代器在lst_all_vertex_main中的位置
+    //以下开始求所有的包含交点的边界多边形
+    plg_vertexs resulting_loops;
+    typedef vector<pair<int,int>> loop_vtxs;
+    while(!lst_intersects_left.empty()){
+        loop_vtxs loop;
+        auto it = *lst_intersects_left.begin();
+        if(!it->is_enter)
+            it = it->it_dual;
+        lst_intersects_left.erase(it->it_lst_left);
+        while(!it->is_traversed){
+            loop.push_back(it->pt);
+            it->is_traversed = true;
+            it = it->is_loop_last ? it->it_loop_head : std::next(it);   //在当前链表中移动
+            if(!it->is_vertex){
+                it = it->it_dual;   //切换链表
+                lst_intersects_left.erase(it->it_lst_left);
+            }
+        }
+        resulting_loops.push_back(loop);
+    }//交点多边形求解完成
+    //完成结果环之间的配对
+    vector<loop_vtxs> loops_out, loops_in;
+    for(auto &loop : resulting_loops){
+        float area = get_signed_area(loop);
+        if(area > 0)
+            //因为是以最左侧点作为原点求面积的，大于零说明环绕方向为逆时针
+            loops_out.push_back(loop);
+        else
+            loops_in.push_back(loop);
+    }
+    if(loops_out.empty()){
+        //需要将原先某个多边形的外环设置为新的外环
+        float area_main = abs(get_signed_area(vertexs_main_plg[0]));
+        float area_clip = abs(get_signed_area(vertexs_clip_plg[0]));
+        loops_out.push_back(area_clip > area_main ? vertexs_clip_plg[0] : vertexs_main_plg[0]);
+    }
+    //对每个内环确定外环归属
+    vector<int> idx_loop_out_belonged(loops_out.size(), -1);
+    const double epsilon = 1e-5;
+    int idx_loop_in = 0;
+    for(auto& loop : loops_in){
+        bool succeed;
+        pair<double, double> pt = get_inner_point(loop, succeed);
+        int idx_loop_out = 0;
+        for(auto& loop_out_int : loops_out){
+            vector<pair<double, double>> loop_out_double;
+            for(auto &pt:loop_out_int){
+                loop_out_double.push_back(pair<double, double>(pt.first, pt.second));
+            }
+            double winding = get_winding<double>(pt, loop_out_double);
+            if(abs(winding) > epsilon){
+                idx_loop_out_belonged[idx_loop_in] = idx_loop_out;
+            }
+            ++idx_loop_out;
+        }
+        ++idx_loop_in;
+    }
+    vector<plg_vertexs> result(loops_out.size());
+    for(int i = 0; i < loops_out.size(); ++i){
+        result[i].push_back(loops_out[i]);
+    }
+    for(int i = 0; i < loops_in.size(); ++i){
+        if(idx_loop_out_belonged[i] != -1){
+            result[idx_loop_out_belonged[i]].push_back(loops_in[i]);
+        }
+    }
+    return result;
+}
+
+pair<int, int> line_seg_intersect(const pair<int, int>& p1, const pair<int, int>& p2,  const pair<int, int>& p3, const pair<int, int>& p4, bool& valid, bool& is_enter, double& t){
+    //判定线段p1p2与p3p4是否有交点，以及p1p2穿过p3p4是穿入边界还是穿出边界,同时返回交点到p1的长度(t)
+    int x1 = p1.first, y1 = p1.second,
+      x2 = p2.first, y2 = p2.second,
+      x3 = p3.first, y3 = p3.second,
+      x4 = p4.first, y4 = p4.second;
+    int det = (x1 - x2) * (y4 - y3) - (x4 - x3) * (y1 - y2);
+    pair<int, int> result;
+    if(det == 0)
+        valid = false;
+    double t1 = static_cast<double>( (y4 - y3) * (x1 - x3) + (y2 - y1) * (y1 - y3) ) / det;
+    double t2 = static_cast<double>( (x3 - x4) * (x1 - x3) + (x1 - x2) * (y1 - y3) ) / det;
+    if(!(t1 >= 0 && t1 <= 1 && t2 >= 0 && t2 <= 1))
+        valid = false;
+    result.first = round<double>(t1); result.second = round<double>(t2);
+    is_enter = det > 0;
+    t = t1;
+    return result;
+}
+
+pair<double, double> get_inner_point(const vector<pair<int, int>>& loop, bool &succeed){
+    vector<pair<int, int>> loop_current = loop;
+    loop_current.push_back(loop_current.front());
+    pair<int, int> pt = loop_current[0];
+    for(auto &pt_it : loop_current){
+        if(pt_it.second > pt.second)
+            pt = pt_it;
+    }
+    double y = pt.second - 0.5;
+    vector<double> intersects;
+    for(int j = 0; j < loop_current.size() - 1; ++j){
+        double x1 = loop_current[j].first, y1 = loop_current[j].second,
+               x2 = loop_current[j + 1].first, y2 = loop_current[j + 1].second;
+        if((y1 > y && y2 > y) || (y1 < y && y2 < y) || (y1 == y && y2 == y))
+            continue;
+        intersects.push_back(x1 + (x2 - x1) * (y - y1) / (y2 - y1));
+    }
+    double epsilon = 1e-5;
+    std::sort(intersects.begin(), intersects.end());
+    if(intersects.size() < 2 || abs(intersects[0] - intersects[1]) < epsilon){
+        succeed = false;
+        return pair<double, double>();
+    }
+    succeed = true;
+    return pair<double, double>((intersects[0] + intersects[1]) / 2, y);
+}
+
+float get_signed_area(const vector<pair<int, int>>& loop){
+    vector<pair<int, int>> loop_current = loop;
+    loop_current.push_back(loop.front());
+    pair<int, int> pt_left_most = loop_current[0];
+    for(auto &pt_it : loop_current){
+        if(pt_it.first < pt_left_most.first)
+            pt_left_most = pt_it;
+    }
+    pt_left_most.first -= 100;
+    float area = 0;
+    for(int i = 0; i < loop_current.size() - 1; ++i){
+        int x1 = loop_current[i].first - pt_left_most.first, y1 = loop_current[i].second - pt_left_most.second,
+            x2 = loop_current[i + 1].first - pt_left_most.first, y2 = loop_current[i + 1].second - pt_left_most.second;
+        area += (x1 * y2 - x2 * y1) * 0.5;
+    }
+    return area;
 }
