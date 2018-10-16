@@ -15,9 +15,9 @@ class Polygon
 public:
     Polygon();
     QString init(const plg_vertexs& vertexes);
-    //void paint(QPainter* painter, pair<float, float> translate, float scale);
+    void paint(QPainter* painter, pair<float, float> translate, float scale);
 private:
-    QPixmap paint_local_img(const plg_vertexs& vtxs_view);
+    QPixmap paint_local_img(const plg_vertexs& vtxs_view, pair<int, int>& pt_belt);
 private:
     plg_vertexs m_vertex;   //保存的是多边形顶点的逻辑坐标
     QColor m_color_edge;

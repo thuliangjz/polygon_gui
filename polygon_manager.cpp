@@ -12,20 +12,9 @@ PolygonManager::PolygonManager(QQuickItem *parent): QQuickPaintedItem (parent)
 
 void PolygonManager::paint(QPainter *painter){
     //TODO:在此处加入绘制多边形代码
-    QImage img_mono(200, 200, QImage::Format_Mono);
-    img_mono.setColor(0, qRgba(255, 255, 255, 0));
-    img_mono.setColor(1, qRgb(0, 0, 255));
-    img_mono.fill(0);
-    QPixmap map = QPixmap::fromImage(img_mono);
-    QPainter painter_map(&map);
-    painter_map.setBrush(Qt::blue);
-    painter_map.drawRect(50, 50, 50, 50);
-
-    QPixmap map_bg(200, 200);
-    map_bg.fill(QColor(255, 0, 0));
-    painter->drawPixmap(0, 0, map_bg);
-    painter->drawPixmap(0, 0, map);
-
+    for(auto &plg:m_polygons){
+        plg.paint(painter, pair<float, float>(-this->width() / 2, this->height() / 2), 1);
+    }
 }
 
 QString PolygonManager::new_polygon_by_string(QString input){

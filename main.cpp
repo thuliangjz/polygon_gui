@@ -12,9 +12,6 @@ int main(int argc, char *argv[])
     QQmlApplicationEngine engine;
     engine.load(QUrl(QStringLiteral("qrc:/main.qml")));
 
-    double d = -0.7;
-    qDebug() << static_cast<int>(d);
-
     if (engine.rootObjects().isEmpty())
         return -1;
 

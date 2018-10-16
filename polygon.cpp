@@ -2,7 +2,7 @@
 #include <math.h>
 #include <algorithm>
 #include <list>
-
+#include <QDebug>
 using std::list;
 template <typename T>
 double get_winding(pair<T, T> pt,const vector<pair<T, T>>& vtxs);
@@ -102,20 +102,20 @@ QString Polygon::init(const plg_vertexs& vertexes){
             if(pt_it.second > pt.second)
                 pt = pt_it;
         }
-        double y = pt.second;
+        double y = pt.second - 0.5;
         vector<double> intersects;
         for(int j = 0; j < loop_current.size() - 1; ++j){
             double x1 = loop_current[j].first, y1 = loop_current[j].second,
                    x2 = loop_current[j + 1].first, y2 = loop_current[j + 1].second;
-            if((y1 > y && y2 > y) || (y1 < y && y2 < y))
+            if((y1 > y && y2 > y) || (y1 < y && y2 < y) || (y1 == y && y2 == y))
                 continue;
-            intersects.push_back(static_cast<double>(pt.first) + (x2 - x1) * (y - y1) / (y2 - y1));
+            intersects.push_back(x1 + (x2 - x1) * (y - y1) / (y2 - y1));
         }
         std::sort(intersects.begin(), intersects.end());
         if(intersects.size() < 2 || abs(intersects[0] - intersects[1]) < epsilon)
             return err_inner_pt_not_found;
 
-        pair<double, double> pt_double((intersects[0] + intersects[1]) / 2, pt.second - 0.5);  //这个点一定是在环的内部的
+        pair<double, double> pt_double((intersects[0] + intersects[1]) / 2, y);  //这个点一定是在环的内部的
         vector<pair<double, double>>vtxs_double;
         for(auto & pt_it:loop_current){
             vtxs_double.push_back(pair<double, double>(pt_it.first, pt_it.second));
@@ -158,7 +158,41 @@ inline T get_online_indicator(pair<pair<T, T>, pair<T, T>> line, pair<T, T> pt){
     return (y2 - y1) * (x - x1) - (x2 - x1) * (y - y1);
 }
 
-QPixmap Polygon::paint_local_img(const plg_vertexs& vtxs_view){
+template <typename T>
+inline int round(T x){
+    int xi = static_cast<int>(x);
+    double r = static_cast<double>(x - xi);
+    xi += r > 0.5 ? 1 : 0;
+    xi -= r < -0.5 ? 1 : 0;
+    return xi;
+}
+
+void Polygon::paint(QPainter* painter, pair<float, float> translate, float scale){
+    plg_vertexs vtxs_view(m_vertex);
+    for(auto &loop:vtxs_view){
+        for(auto &pt:loop){
+            pt.first = round<float>(scale * (pt.first - translate.first));
+            pt.second = round<float>(scale * (translate.second - pt.second));
+        }
+    }
+    int left = vtxs_view.front().front().first,
+        top = vtxs_view.front().front().second,
+        right = left, bottom = top;
+    for(auto &loop:vtxs_view){
+        for(auto &pt:loop){
+            left = pt.first < left ? pt.first : left;
+            right = pt.first > right ? pt.first : right;
+            top = pt.second < top ? pt.second : top;
+            bottom = pt.second > bottom ? pt.second : bottom;
+        }
+    }
+    pair<int, int> pt_belt;
+    QPixmap map = paint_local_img(vtxs_view, pt_belt);
+    painter->drawPixmap(pt_belt.first, pt_belt.second, map);
+}
+
+QPixmap Polygon::paint_local_img(const plg_vertexs& vtxs_view, pair<int, int>&pt_belt){
+    //在pt_belt中返回图片应该被绘制的点
     //vtxs_view是在屏幕坐标系下的坐标
     plg_vertexs vtxs_map(vtxs_view);
     int left = vtxs_view.front().front().first,
@@ -200,6 +234,7 @@ QPixmap Polygon::paint_local_img(const plg_vertexs& vtxs_view){
             else{
                 net_idx = loop[i + 1].second; start = loop[i + 1]; end = loop[i];
             }
+            net_idx -= top;
             new_edge_table[net_idx] = new_edge_table[net_idx] ? new_edge_table[net_idx] : (new vector<edge_entry>);
             new_edge_table[net_idx]->push_back(edge_entry(start, end, start.first, static_cast<double>(start.first),
                                                           static_cast<double>(end.first - start.first) / (end.second - start.second),
@@ -208,20 +243,28 @@ QPixmap Polygon::paint_local_img(const plg_vertexs& vtxs_view){
     }
 
     list<edge_entry> active_edge_list;
-    QImage img_inside(right - left, bottom - top, QImage::Format_Mono);
+    const int margin = 100;
+    QImage img_inside(right - left + 2 * margin, bottom - top + 2 * margin, QImage::Format_Mono);
+    pt_belt.first = left - margin;
+    pt_belt.second = top - margin;
     img_inside.setColor(0, qRgba(255, 255, 255, 0));
     img_inside.setColor(1, qRgb(m_color_inside.red(), m_color_inside.green(), m_color_inside.blue()));
     img_inside.fill(0);
     for(int y = top; y < bottom; ++y){
-        if(new_edge_table[y]){
-            //添加新边并进行填充操作
-            for(auto &edge:(*new_edge_table[y])){
+        if(new_edge_table[y - top]){
+            //添加新边并进行填充操作,
+            //注意，这一部分写的较长，但是因为执行次数比较少，所以整体效率不会下降太多，后面的部分因为执行次数多所以应该尽量简洁
+            for(auto &edge:(*new_edge_table[y - top])){
+                bool inserted = false;
                 for(auto it = active_edge_list.begin(); it != active_edge_list.end(); ++it){
                     if(edge.current_x_double < it->current_x_double || (edge.current_x_double == it->current_x_double && edge.delta_x < it->delta_x)){
                         it = active_edge_list.insert(it, edge);
+                        inserted = true;
                         break;
                     }
                 }
+                if(!inserted)
+                    active_edge_list.push_back(edge);
             }
             //处理扫描线与顶点相交的问题
             vector<int> intersects;
@@ -229,6 +272,8 @@ QPixmap Polygon::paint_local_img(const plg_vertexs& vtxs_view){
                 intersects.push_back(it->current_x_int);
                 if(it->current_y_int == it->start.second || it->current_y_int == it->end.second){
                     auto it_next = std::next(it);
+                    if(it_next == active_edge_list.end() || it_next->current_x_int > it->current_x_int)  //处理存在水平边的问题
+                        continue;
                     pair<int, int> ref_pt_it = it->current_y_int == it->start.second ? it->end : it->start,
                             ref_pt_it_next = it_next->current_y_int == it_next->start.second ? it_next->end : it_next->start;
                     ++it;
@@ -238,30 +283,43 @@ QPixmap Polygon::paint_local_img(const plg_vertexs& vtxs_view){
             }
             //通过intersects进行上色
             for(auto it = intersects.begin(); it != intersects.end(); std::advance(it, 2)){
-                int idx_row = y - top;
-                int idx_col_l = *it - left,
-                    idx_col_r = *std::next(it) - right;
+                int idx_row = y - top + margin;
+                int idx_col_l = *it - left + margin,
+                    idx_col_r = *std::next(it) - left + margin;
                 uchar* scan_line = img_inside.scanLine(idx_row);
                 int cnt_bt = (idx_col_r >> 3) - ((idx_col_l >> 3) + 1);
                 if(cnt_bt > 0){
                     memset(scan_line + (idx_col_l >> 3) + 1, 255, cnt_bt);
                 }
                 scan_line[idx_col_l >> 3] = scan_line[idx_col_l >> 3] | static_cast<uchar>((255 << ((((idx_col_l >> 3) + 1) << 3) - idx_col_l)) ^ 255);
-                scan_line[idx_col_r >> 3] = scan_line[idx_col_r >> 3] | static_cast<uchar>(128 >> (idx_col_r - (idx_col_r >> 3)));
+                scan_line[idx_col_r >> 3] = scan_line[idx_col_r >> 3] | static_cast<uchar>(0xffffffff << (8 - (idx_col_r & 7)));
+            }
+            for(auto it = active_edge_list.begin(); it != active_edge_list.end();){
+                if(it->current_y_int >= it->end.second){
+                    it = active_edge_list.erase(it);
+                    continue;
+                }
+                it->current_x_double += it->delta_x;
+                it->current_x_int = static_cast<int>(it->current_x_double);
+                double rounding = it->current_x_double - it->current_x_int;
+                it->current_x_int += rounding > 0.5 ? 1 : 0;
+                it->current_x_int += rounding < -0.5 ? -1 : 0;
+                ++(it->current_y_int);
+                ++it;
             }
             continue;
         }
         for(auto it = active_edge_list.begin(); it != active_edge_list.end(); std::advance(it, 2)){
-            int idx_row = y - top;
-            int idx_col_l = it->current_x_int - left,
-                idx_col_r = std::next(it)->current_x_int - right;
+            int idx_row = y - top + margin;
+            int idx_col_l = it->current_x_int - left + margin,
+                idx_col_r = std::next(it)->current_x_int - left + margin;
             uchar* scan_line = img_inside.scanLine(idx_row);
             int cnt_bt = (idx_col_r >> 3) - ((idx_col_l >> 3) + 1);
             if(cnt_bt > 0){
                 memset(scan_line + (idx_col_l >> 3) + 1, 255, cnt_bt);
             }
             scan_line[idx_col_l >> 3] = scan_line[idx_col_l >> 3] | static_cast<uchar>((255 << ((((idx_col_l >> 3) + 1) << 3) - idx_col_l)) ^ 255);
-            scan_line[idx_col_r >> 3] = scan_line[idx_col_r >> 3] | static_cast<uchar>(128 >> (idx_col_r - (idx_col_r >> 3)));
+            scan_line[idx_col_r >> 3] = scan_line[idx_col_r >> 3] | static_cast<uchar>(0xffffffff << (8 - (idx_col_r & 7)));
         }
         for(auto it = active_edge_list.begin(); it != active_edge_list.end();){
             if(it->current_y_int >= it->end.second){
@@ -286,8 +344,8 @@ QPixmap Polygon::paint_local_img(const plg_vertexs& vtxs_view){
     painter_map.setPen(m_color_edge);
     for(auto &loop:vtxs_map){
         for(int i = 0; i < loop.size() - 1; ++i){
-            int x1 = loop[i].first - left, y1 = loop[i].second - top,
-                x2 = loop[i + 1].first - left, y2 = loop[i].second - top;
+            int x1 = loop[i].first - left + margin, y1 = loop[i].second - top + margin,
+                x2 = loop[i + 1].first - left + margin, y2 = loop[i + 1].second - top + margin;
             painter_map.drawLine(x1, y1, x2, y2);
         }
     }
