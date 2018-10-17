@@ -55,6 +55,20 @@ QString PolygonManager::new_polygon_by_string(QString input){
     QString res = plg.init(vtx_description);
     if(res == "ok")
         m_polygons.push_back(plg);
-
+    if(m_polygons.size() >= 2)
+        test_clip();
     return res;
+}
+
+void PolygonManager::test_clip(){
+    vector<plg_vertexs> plgs_clip = m_polygons[0].clip(m_polygons[1]);
+    m_polygons.clear();
+    for(auto& vtxs : plgs_clip){
+        Polygon plg;
+        QString s = plg.init(vtxs);
+        if(s == "ok")
+            m_polygons.push_back(plg);
+        else
+            qDebug() << "error occured when cliping" << s;
+    }
 }

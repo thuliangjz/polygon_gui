@@ -14,13 +14,15 @@ pair<int, int> line_seg_intersect(const pair<int, int>& p1,
                                   const pair<int, int>& p2,
                                   const pair<int, int>& p3,
                                   const pair<int, int>& p4,
-                                  bool& valid, bool& is_enter, double& t);
+                                  bool& valid, bool& is_enter,
+                                  double& t1, double& t2);
 template <typename T>
 inline int round(T x);
 
 int get_cnt_ctx(plg_vertexs& vtxs);
 
 pair<double, double> get_inner_point(const vector<pair<int, int>>& loop, bool& succeed);
+double get_winding_d_i(pair<double, double> pt_d, vector<pair<int, int>>& vtxs_int);
 float get_signed_area(const vector<pair<int, int>>& loop);
 
 Polygon::Polygon():
@@ -39,6 +41,30 @@ QString Polygon::init(const plg_vertexs& vertexes){
     const QString err_inside_pt_out = "多边形所有内点应该在外环围成区域的闭包内";
     const QString err_loop_vtx_dup = "多边形的每个环中不能包括相同坐标的顶点";
     const QString err_inner_pt_not_found = "依照当前算法无法有效找到某个环的内点";
+    //检测任意两边不相交
+    vector<line_seg> edge_total;
+    plg_vertexs vertex_tmp(vertexes);
+    for(auto &loop:vertex_tmp){
+        loop.push_back(loop.front());
+    }
+    for(auto &loop:vertex_tmp){
+        for(int i = 0; i + 1< loop.size(); ++i){
+            edge_total.push_back(line_seg(loop[i], loop[i + 1]));
+        }
+    }
+    for(int i = 0; i + 1< edge_total.size(); ++i){
+        for(int j = i + 1; j < edge_total.size(); ++j){
+            double t1 = 0, t2 = 0;
+            bool valid, is_inter;
+            line_seg_intersect(edge_total[i].first, edge_total[i].second,
+                               edge_total[j].first, edge_total[j].second,
+                               valid, is_inter, t1, t2);
+            if(!valid || (valid && (t1 < epsilon || t2 < epsilon || t1 > 1 - epsilon || t2 > 1 - epsilon)))
+                continue;
+            return err_intersect;
+        }
+    }
+    /*
     //检测除相邻两条边外，任意两条边不相交
     vtxs_loop vtx_total;
     vector<line_seg> edges_total;
@@ -66,9 +92,10 @@ QString Polygon::init(const plg_vertexs& vertexes){
                 return err_intersect;
         }
     }
+    */
     //检测所有内环上的点位于外环围成的区域的闭包中
     vector<line_seg> outer_loop_edge;
-    for(int i = 0; i < vertexes[0].size() - 1; ++i){
+    for(int i = 0; i + 1< vertexes[0].size(); ++i){
         outer_loop_edge.push_back(line_seg(vertexes[0][i], vertexes[0][i + 1]));
     }
     outer_loop_edge.push_back(line_seg(vertexes[0].back(), vertexes[0].front()));
@@ -117,7 +144,7 @@ QString Polygon::init(const plg_vertexs& vertexes){
         }
         double y = pt.second - 0.5;
         vector<double> intersects;
-        for(int j = 0; j < loop_current.size() - 1; ++j){
+        for(int j = 0; j + 1 < loop_current.size(); ++j){
             double x1 = loop_current[j].first, y1 = loop_current[j].second,
                    x2 = loop_current[j + 1].first, y2 = loop_current[j + 1].second;
             if((y1 > y && y2 > y) || (y1 < y && y2 < y) || (y1 == y && y2 == y))
@@ -236,7 +263,7 @@ QPixmap Polygon::paint_local_img(const plg_vertexs& vtxs_view, pair<int, int>&pt
         loop.push_back(loop.front());
     }
     for(auto &loop:vtxs_map){
-        for(int i = 0; i < loop.size() - 1; ++i){
+        for(int i = 0; i + 1 < loop.size(); ++i){
             if(loop[i].second == loop[i + 1].second)
                 continue;
             int net_idx;
@@ -279,49 +306,8 @@ QPixmap Polygon::paint_local_img(const plg_vertexs& vtxs_view, pair<int, int>&pt
                 if(!inserted)
                     active_edge_list.push_back(edge);
             }
-            //处理扫描线与顶点相交的问题
-            vector<int> intersects;
-            for(auto it = active_edge_list.begin(); it != active_edge_list.end(); ++it){
-                intersects.push_back(it->current_x_int);
-                if(it->current_y_int == it->start.second || it->current_y_int == it->end.second){
-                    auto it_next = std::next(it);
-                    if(it_next == active_edge_list.end() || it_next->current_x_int > it->current_x_int)  //处理存在水平边的问题
-                        continue;
-                    pair<int, int> ref_pt_it = it->current_y_int == it->start.second ? it->end : it->start,
-                            ref_pt_it_next = it_next->current_y_int == it_next->start.second ? it_next->end : it_next->start;
-                    ++it;
-                    if((ref_pt_it.second - y) * (ref_pt_it_next.second - y) > 0)
-                        intersects.pop_back();
-                }
-            }
-            //通过intersects进行上色
-            for(auto it = intersects.begin(); it != intersects.end(); std::advance(it, 2)){
-                int idx_row = y - top + margin;
-                int idx_col_l = *it - left + margin,
-                    idx_col_r = *std::next(it) - left + margin;
-                uchar* scan_line = img_inside.scanLine(idx_row);
-                int cnt_bt = (idx_col_r >> 3) - ((idx_col_l >> 3) + 1);
-                if(cnt_bt > 0){
-                    memset(scan_line + (idx_col_l >> 3) + 1, 255, cnt_bt);
-                }
-                scan_line[idx_col_l >> 3] = scan_line[idx_col_l >> 3] | static_cast<uchar>((255 << ((((idx_col_l >> 3) + 1) << 3) - idx_col_l)) ^ 255);
-                scan_line[idx_col_r >> 3] = scan_line[idx_col_r >> 3] | static_cast<uchar>(0xffffffff << (8 - (idx_col_r & 7)));
-            }
-            for(auto it = active_edge_list.begin(); it != active_edge_list.end();){
-                if(it->current_y_int >= it->end.second){
-                    it = active_edge_list.erase(it);
-                    continue;
-                }
-                it->current_x_double += it->delta_x;
-                it->current_x_int = static_cast<int>(it->current_x_double);
-                double rounding = it->current_x_double - it->current_x_int;
-                it->current_x_int += rounding > 0.5 ? 1 : 0;
-                it->current_x_int += rounding < -0.5 ? -1 : 0;
-                ++(it->current_y_int);
-                ++it;
-            }
-            continue;
         }
+        const unsigned int mask = 0xffffffff;
         for(auto it = active_edge_list.begin(); it != active_edge_list.end(); std::advance(it, 2)){
             int idx_row = y - top + margin;
             int idx_col_l = it->current_x_int - left + margin,
@@ -331,20 +317,25 @@ QPixmap Polygon::paint_local_img(const plg_vertexs& vtxs_view, pair<int, int>&pt
             if(cnt_bt > 0){
                 memset(scan_line + (idx_col_l >> 3) + 1, 255, cnt_bt);
             }
-            scan_line[idx_col_l >> 3] = scan_line[idx_col_l >> 3] | static_cast<uchar>((255 << ((((idx_col_l >> 3) + 1) << 3) - idx_col_l)) ^ 255);
-            scan_line[idx_col_r >> 3] = scan_line[idx_col_r >> 3] | static_cast<uchar>(0xffffffff << (8 - (idx_col_r & 7)));
+            if((idx_col_l >> 3) < (idx_col_r >> 3)){
+               scan_line[idx_col_l >> 3] = scan_line[idx_col_l >> 3] | static_cast<uchar>((255 << ((((idx_col_l >> 3) + 1) << 3) - idx_col_l)) ^ 255);
+               scan_line[idx_col_r >> 3] = scan_line[idx_col_r >> 3] | static_cast<uchar>(0xffffffff << (8 - (idx_col_r & 7)));
+            }
+            else{
+                scan_line[idx_col_l >> 3] = scan_line[idx_col_l >> 3] |  static_cast<uchar>((mask << (8 - (idx_col_l - ((idx_col_l >> 3) << 3)))) ^ (mask << (8 - (idx_col_r - ((idx_col_r >> 3) << 3)))));
+            }
         }
         for(auto it = active_edge_list.begin(); it != active_edge_list.end();){
-            if(it->current_y_int >= it->end.second){
-                it = active_edge_list.erase(it);
-                continue;
-            }
             it->current_x_double += it->delta_x;
             it->current_x_int = static_cast<int>(it->current_x_double);
             double rounding = it->current_x_double - it->current_x_int;
             it->current_x_int += rounding > 0.5 ? 1 : 0;
             it->current_x_int += rounding < -0.5 ? -1 : 0;
             ++(it->current_y_int);
+            if(it->current_y_int >= it->end.second){
+                it = active_edge_list.erase(it);
+                continue;
+            }
             ++it;
         }
     }
@@ -356,7 +347,7 @@ QPixmap Polygon::paint_local_img(const plg_vertexs& vtxs_view, pair<int, int>&pt
     QPainter painter_map(&pixmap);
     painter_map.setPen(m_color_edge);
     for(auto &loop:vtxs_map){
-        for(int i = 0; i < loop.size() - 1; ++i){
+        for(int i = 0; i + 1 < loop.size(); ++i){
             int x1 = loop[i].first - left + margin, y1 = loop[i].second - top + margin,
                 x2 = loop[i + 1].first - left + margin, y2 = loop[i + 1].second - top + margin;
             painter_map.drawLine(x1, y1, x2, y2);
@@ -404,17 +395,17 @@ vector<plg_vertexs> Polygon::clip(const Polygon& plg){
     int idx_vertex_main = 0;
     int id_intersect = 0;
     for(auto &loop_main:vertexs_main_plg){
-        for(int i = 0; i < loop_main.size() - 1; ++i, ++idx_vertex_main){
+        for(int i = 0; i + 1 < loop_main.size(); ++i, ++idx_vertex_main){
             int idx_vertex_clip = 0;
             for(auto &loop_clip:vertexs_clip_plg){
-                for(int j = 0; j < loop_clip.size() - 1; ++j, ++idx_vertex_clip){
+                for(int j = 0; j + 1 < loop_clip.size(); ++j, ++idx_vertex_clip){
                     bool valid, is_enter;
-                    double t = 0;
+                    double t1 = 0, t2 = 0;
                     pair<int, int> intersect = line_seg_intersect(loop_main[i], loop_main[i + 1],
-                            loop_clip[j], loop_clip[j + 1], valid, is_enter, t);
+                            loop_clip[j], loop_clip[j + 1], valid, is_enter, t1, t2);
                     if(valid){
-                        vec_intersect_main[idx_vertex_main].push_back(intersect_vector_entry(intersect, id_intersect, is_enter, t));
-                        vec_intersect_clip[idx_vertex_clip].push_back(intersect_vector_entry(intersect, id_intersect, is_enter, t));
+                        vec_intersect_main[idx_vertex_main].push_back(intersect_vector_entry(intersect, id_intersect, is_enter, t1));
+                        vec_intersect_clip[idx_vertex_clip].push_back(intersect_vector_entry(intersect, id_intersect, is_enter, t2));
                         ++id_intersect;
                     }
                 }
@@ -429,6 +420,27 @@ vector<plg_vertexs> Polygon::clip(const Polygon& plg){
         loop.pop_back();
     for(auto &loop:vertexs_main_plg)
         loop.pop_back();
+    vector<bool> intersect_valid(id_intersect, true);
+    const double epsilon = 1e-5;
+    //排除掉所有很快进入又很快出去（或者相反）的交点对
+    for(auto &intersects : vec_intersect_main){
+        for(int i = 0; i + 1 < intersects.size(); ++i){
+            if(abs(intersects[i].t - intersects[i + 1].t) < epsilon && intersects[i].is_enter != intersects[i + 1].is_enter){
+                intersect_valid[intersects[i].id] = false;
+                intersect_valid[intersects[i + 1].id] = false;
+            }
+        }
+    }
+    for(auto &intersects : vec_intersect_clip){
+        for(int i = 0; i + 1 < intersects.size(); ++i){
+            if(abs(intersects[i].t - intersects[i + 1].t) < epsilon && intersects[i].is_enter != intersects[i + 1].is_enter){
+                intersect_valid[intersects[i].id] = false;
+                intersect_valid[intersects[i + 1].id] = false;
+            }
+        }
+    }
+
+    //排序结束
     //构建顶点列表
     struct intersect_list_entry{
         bool is_vertex;
@@ -441,11 +453,14 @@ vector<plg_vertexs> Polygon::clip(const Polygon& plg){
         list<list<intersect_list_entry>::iterator>::iterator it_lst_left;
         intersect_list_entry(pair<int, int> pt, bool i_v=false):is_vertex(i_v), is_traversed(false), is_loop_last(false), pt(pt){}
     };
+    vector<bool> lp_interseted_main(vertexs_main_plg.size(), false),
+            lp_interseted_clip(vertexs_clip_plg.size(), false);
     list<list<intersect_list_entry>::iterator> lst_intersects_left;   //指向主多边形链表
     vector<list<intersect_list_entry>::iterator> dual_it_table(id_intersect);
     vector<list<list<intersect_list_entry>::iterator>::iterator> lst_left_it_table(id_intersect);   //在构建主多边形表过程中填写
     list<intersect_list_entry> lst_all_vertex_main, lst_all_vertex_clip;
     idx_vertex_main = 0;
+    int idx_loop_main = 0;
     for(auto &loop : vertexs_main_plg){
         bool first_it_written = false;
         list<intersect_list_entry>::iterator it_loop_head;
@@ -454,6 +469,8 @@ vector<plg_vertexs> Polygon::clip(const Polygon& plg){
             it_loop_head = !first_it_written ? std::next(lst_all_vertex_main.end(), -1) : it_loop_head;
             first_it_written = true;
             for(auto & intersect:vec_intersect_main[idx_vertex_main]){
+                if(!intersect_valid[intersect.id])
+                    continue;
                 lst_all_vertex_main.push_back(intersect_list_entry(intersect.pt));
                 auto &last = lst_all_vertex_main.back();
                 auto it_last = std::next(lst_all_vertex_main.end(), -1);
@@ -462,13 +479,15 @@ vector<plg_vertexs> Polygon::clip(const Polygon& plg){
                 lst_left_it_table[intersect.id] = std::next(lst_intersects_left.end(), -1); //记录lst_intersects_left指向它的指针
                 last.it_lst_left = std::next(lst_intersects_left.end(), -1);
                 dual_it_table[intersect.id] = it_last;
+                lp_interseted_main[idx_loop_main] = true;
             }
             ++idx_vertex_main;
         }
         lst_all_vertex_main.back().is_loop_last = true;
         lst_all_vertex_main.back().it_loop_head = it_loop_head;
+        ++idx_loop_main;
     }
-    int idx_vertex_clip = 0;
+    int idx_vertex_clip = 0, idx_loop_clip = 0;
     for(auto &loop : vertexs_clip_plg){
         bool first_it_written = false;
         list<intersect_list_entry>::iterator it_loop_head;
@@ -477,6 +496,8 @@ vector<plg_vertexs> Polygon::clip(const Polygon& plg){
             it_loop_head = !first_it_written ? std::next(lst_all_vertex_clip.end(), -1) : it_loop_head;
             first_it_written = true;
             for(auto &intersect : vec_intersect_clip[idx_vertex_clip]){
+                if(!intersect_valid[intersect.id])
+                    continue;
                 lst_all_vertex_clip.push_back(intersect_list_entry(intersect.pt));
                 auto &last = lst_all_vertex_clip.back();
                 auto it_last = std::next(lst_all_vertex_clip.end(), -1);
@@ -484,11 +505,13 @@ vector<plg_vertexs> Polygon::clip(const Polygon& plg){
                 last.it_lst_left = lst_left_it_table[intersect.id]; //建立table的作用
                 last.it_dual = dual_it_table[intersect.id]; //建立table的作用
                 dual_it_table[intersect.id]->it_dual = it_last;
+                lp_interseted_clip[idx_loop_clip] = true;
             }
             ++idx_vertex_clip;
         }
         lst_all_vertex_clip.back().is_loop_last = true;
         lst_all_vertex_clip.back().it_loop_head = it_loop_head;
+        ++idx_loop_clip;
     }//顶点列表构建完成
     //至此，lst_all_vertex_clip和lst_all_vertex_main代表了原始算法中的顶点列表，lst_left_it_table中保留了剩下的交点迭代器在lst_all_vertex_main中的位置
     //以下开始求所有的包含交点的边界多边形
@@ -497,20 +520,35 @@ vector<plg_vertexs> Polygon::clip(const Polygon& plg){
     while(!lst_intersects_left.empty()){
         loop_vtxs loop;
         auto it = *lst_intersects_left.begin();
-        if(!it->is_enter)
-            it = it->it_dual;
+        bool traversing_in_main = true;
+        if(!it->is_enter){it = it->it_dual; traversing_in_main = false;}
         lst_intersects_left.erase(it->it_lst_left);
+        auto entry1 = *it, entry2 = entry1;
         while(!it->is_traversed){
             loop.push_back(it->pt);
             it->is_traversed = true;
             it = it->is_loop_last ? it->it_loop_head : std::next(it);   //在当前链表中移动
-            if(!it->is_vertex){
+            if(!it->is_vertex && it->is_enter != traversing_in_main){   //注意到可能会出现连着遇到两个入点或者出点的情况
                 it = it->it_dual;   //切换链表
-                lst_intersects_left.erase(it->it_lst_left);
+                traversing_in_main = !traversing_in_main;
+                if(!it->is_traversed)   //避免删掉已经删除过的表项
+                    lst_intersects_left.erase(it->it_lst_left);
             }
+            entry2 = *it;
         }
-        resulting_loops.push_back(loop);
+        if(!loop.empty())
+            resulting_loops.push_back(loop);
     }//交点多边形求解完成
+    for(auto &loop:resulting_loops){    //删除那些相同的顶点
+        loop_vtxs loop_tmp;
+        loop_tmp.push_back(loop.front());
+        for(int i = 1; i < loop.size();++i){
+            if(loop[i].first == loop_tmp.back().first && loop[i].second == loop_tmp.back().second)
+                continue;
+            loop_tmp.push_back(loop[i]);
+        }
+        loop = loop_tmp;
+    }
     //完成结果环之间的配对
     vector<loop_vtxs> loops_out, loops_in;
     for(auto &loop : resulting_loops){
@@ -521,15 +559,56 @@ vector<plg_vertexs> Polygon::clip(const Polygon& plg){
         else
             loops_in.push_back(loop);
     }
+    for(int i = 1; i < vertexs_main_plg.size(); ++i){
+        if(!lp_interseted_main[i])
+            loops_in.push_back(vertexs_main_plg[i]);
+    }
+    for(int i = 1; i < vertexs_clip_plg.size(); ++i){
+        if(!lp_interseted_clip[i])
+            loops_in.push_back(vertexs_clip_plg[i]);
+    }
     if(loops_out.empty()){
         //需要将原先某个多边形的外环设置为新的外环
+        bool succeed;
+        pair<double, double> pt_main = get_inner_point(vertexs_main_plg[0], succeed),
+                pt_clip = get_inner_point(vertexs_clip_plg[0], succeed);
+        double winding_m_c = get_winding_d_i(pt_main, vertexs_clip_plg[0]),
+               winding_c_m = get_winding_d_i(pt_clip, vertexs_main_plg[0]);
+        if(abs(winding_c_m) < epsilon && abs(winding_m_c) < epsilon)
+            return vector<plg_vertexs>();
         float area_main = abs(get_signed_area(vertexs_main_plg[0]));
         float area_clip = abs(get_signed_area(vertexs_clip_plg[0]));
-        loops_out.push_back(area_clip > area_main ? vertexs_clip_plg[0] : vertexs_main_plg[0]);
+        loop_vtxs &loop_out = area_main > area_clip ? vertexs_clip_plg[0] : vertexs_main_plg[0];
+        //检查这个外环是否被包含在某个内环内部
+        pair<double, double> pt_d = get_inner_point(loop_out, succeed);
+        for(auto &loop : loops_in){
+            double winding = get_winding_d_i(pt_d, loop);
+            if(abs(winding) > epsilon){
+                //或者内环包含在外环内或者外环包含在内环内
+                float area_out = abs(get_signed_area(loop_out)),
+                      area_in = abs(get_signed_area(loop));
+                if(area_in > area_out){
+                    return vector<plg_vertexs>();
+                }
+            }
+        }
+        loops_out.push_back(loop_out);
+    }
+    vector<bool> inner_loop_valid(loops_in.size(), true);
+    for(int i = 0; i < loops_in.size(); ++i){
+        bool b0;
+        pair<double, double> pt_d = get_inner_point(loops_in[i], b0);
+        for(int j = 0; j < loops_in.size(); ++j){
+            if(j == i)
+                continue;
+            double winding = get_winding_d_i(pt_d, loops_in[j]);
+            if(abs(winding) > epsilon){
+                inner_loop_valid[i] = false;
+            }
+        }
     }
     //对每个内环确定外环归属
     vector<int> idx_loop_out_belonged(loops_out.size(), -1);
-    const double epsilon = 1e-5;
     int idx_loop_in = 0;
     for(auto& loop : loops_in){
         bool succeed;
@@ -553,14 +632,16 @@ vector<plg_vertexs> Polygon::clip(const Polygon& plg){
         result[i].push_back(loops_out[i]);
     }
     for(int i = 0; i < loops_in.size(); ++i){
-        if(idx_loop_out_belonged[i] != -1){
+        if(inner_loop_valid[i] && idx_loop_out_belonged[i] != -1){
             result[idx_loop_out_belonged[i]].push_back(loops_in[i]);
         }
     }
     return result;
 }
 
-pair<int, int> line_seg_intersect(const pair<int, int>& p1, const pair<int, int>& p2,  const pair<int, int>& p3, const pair<int, int>& p4, bool& valid, bool& is_enter, double& t){
+pair<int, int> line_seg_intersect(const pair<int, int>& p1, const pair<int, int>& p2,
+                                  const pair<int, int>& p3, const pair<int, int>& p4,
+                                  bool& valid, bool& is_enter, double& rt1, double& rt2){
     //判定线段p1p2与p3p4是否有交点，以及p1p2穿过p3p4是穿入边界还是穿出边界,同时返回交点到p1的长度(t)
     int x1 = p1.first, y1 = p1.second,
       x2 = p2.first, y2 = p2.second,
@@ -568,15 +649,17 @@ pair<int, int> line_seg_intersect(const pair<int, int>& p1, const pair<int, int>
       x4 = p4.first, y4 = p4.second;
     int det = (x1 - x2) * (y4 - y3) - (x4 - x3) * (y1 - y2);
     pair<int, int> result;
+    valid = true;
     if(det == 0)
         valid = false;
-    double t1 = static_cast<double>( (y4 - y3) * (x1 - x3) + (y2 - y1) * (y1 - y3) ) / det;
-    double t2 = static_cast<double>( (x3 - x4) * (x1 - x3) + (x1 - x2) * (y1 - y3) ) / det;
+    double t1 = static_cast<double>( (y4 - y3) * (x1 - x3) + (x3 - x4) * (y1 - y3) ) / det;
+    double t2 = static_cast<double>( (y2 - y1) * (x1 - x3) + (x1 - x2) * (y1 - y3) ) / det;
     if(!(t1 >= 0 && t1 <= 1 && t2 >= 0 && t2 <= 1))
         valid = false;
-    result.first = round<double>(t1); result.second = round<double>(t2);
+    result.first = round<double>(x1 + t1 * (x2 - x1));
+    result.second = round<double>(y1 + t1 * (y2 - y1));
     is_enter = det > 0;
-    t = t1;
+    rt1 = t1; rt2 = t2;
     return result;
 }
 
@@ -590,7 +673,7 @@ pair<double, double> get_inner_point(const vector<pair<int, int>>& loop, bool &s
     }
     double y = pt.second - 0.5;
     vector<double> intersects;
-    for(int j = 0; j < loop_current.size() - 1; ++j){
+    for(int j = 0; j + 1 < loop_current.size(); ++j){
         double x1 = loop_current[j].first, y1 = loop_current[j].second,
                x2 = loop_current[j + 1].first, y2 = loop_current[j + 1].second;
         if((y1 > y && y2 > y) || (y1 < y && y2 < y) || (y1 == y && y2 == y))
@@ -617,10 +700,17 @@ float get_signed_area(const vector<pair<int, int>>& loop){
     }
     pt_left_most.first -= 100;
     float area = 0;
-    for(int i = 0; i < loop_current.size() - 1; ++i){
+    for(int i = 0; i + 1 < loop_current.size(); ++i){
         int x1 = loop_current[i].first - pt_left_most.first, y1 = loop_current[i].second - pt_left_most.second,
             x2 = loop_current[i + 1].first - pt_left_most.first, y2 = loop_current[i + 1].second - pt_left_most.second;
         area += (x1 * y2 - x2 * y1) * 0.5;
     }
     return area;
+}
+double get_winding_d_i(pair<double, double> pt_d, vector<pair<int, int>>& vtxs_int){
+    vector<pair<double, double>> vtxs_double;
+    for(auto &pt:vtxs_int){
+        vtxs_double.push_back(pair<double, double>(pt.first, pt.second));
+    }
+    return get_winding<double>(pt_d, vtxs_double);
 }
