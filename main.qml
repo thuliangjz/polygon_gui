@@ -53,6 +53,17 @@ ApplicationWindow{
                 icon.source: "resources/op_clip.png"
             }
 
+            ToolButton {
+                id: bt_navagate
+                text: qsTr("视口")
+                icon.source: "resources/op_navagate.png"
+            }
+
+            ToolButton {
+                id: bt_translate
+                text: qsTr("平移")
+                icon.source: "resources/op_translate.png"
+            }
         }
 
     }
@@ -68,9 +79,16 @@ ApplicationWindow{
         anchors.bottomMargin: 0
         anchors.left: parent.left
         anchors.leftMargin: 0
-        z: 1
         NewInfo {
             id: new_info
+            z:1
+        }
+        NavagateInfo {
+            id:navagate_info
+            z: 1
+        }
+        TranslateInfo {
+            id: translate_info
             z:1
         }
     }
@@ -93,15 +111,36 @@ ApplicationWindow{
         NewClickTrace {
             id: click_new_trace
         }
+        MouseArea {
+            id: ma_navagate
+            anchors.fill: parent
+            visible: navagate_info.visible
+        }
+        MouseArea {
+            id: ma_translate
+            visible: translate_info.choosing_plg
+            anchors.fill: parent
+        }
     }
-
+    function disable_info(){
+        for(var i = 0; i < rect_info.children.length; ++i){
+            rect_info.children[i].deactivate();
+        }
+    }
     Component.onCompleted: {
+        for(var i = 0; i < grid_op_panel.children.length; ++i){
+            grid_op_panel.children[i].clicked.connect(disable_info)
+        }
         bt_new.clicked.connect(new_info.activate)
-        bt_color.clicked.connect(new_info.deactivate)
-
+        bt_navagate.clicked.connect(navagate_info.activate)
+        bt_translate.clicked.connect(translate_info.activate)
+        navagate_info.Keys.pressed.connect(navagate_info.keyPressedHandler(polygon_manager))
+        ma_navagate.wheel.connect(navagate_info.wheelHandler(polygon_manager))
+        ma_translate.clicked.connect(translate_info.clickChooseHandler(polygon_manager))
         new_info.polygonInputOk.connect(new_info.polygonInputResponse(polygon_manager))
-        new_info.clickNewClose.connect(click_new_trace.closeCurrentLoop)
-        new_info.clickNewCancel.connect(click_new_trace.traceClear)
+        translate_info.translate.connect(translate_info.translateOkHandler(polygon_manager))
+//        new_info.clickNewClose.connect(click_new_trace.closeCurrentLoop)
+//        new_info.clickNewCancel.connect(click_new_trace.traceClear)
 
 
     }

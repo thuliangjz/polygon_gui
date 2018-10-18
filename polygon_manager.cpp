@@ -5,15 +5,61 @@
 #include <map>
 #include <QImage>
 
-PolygonManager::PolygonManager(QQuickItem *parent): QQuickPaintedItem (parent)
+PolygonManager::PolygonManager(QQuickItem *parent): QQuickPaintedItem (parent), m_view_translate(0, 0),
+    m_view_scale(1)
 {
 }
 
 void PolygonManager::paint(QPainter *painter){
     //TODO:在此处加入绘制多边形代码
+    int idx_plg = 0;
     for(auto &plg:m_polygons){
-        plg.paint(painter, pair<float, float>(-this->width() / 2, this->height() / 2), 1);
+        bool choosed = std::find(m_choosed_plg_id.begin(), m_choosed_plg_id.end(), idx_plg) != m_choosed_plg_id.end();
+        plg.paint(painter, pair<float, float>(m_view_translate.rx() - this->width() / 2 / m_view_scale,
+                                              m_view_translate.ry() + this->height() / 2 / m_view_scale),
+                  static_cast<float>(m_view_scale), choosed);
+        ++idx_plg;
     }
+}
+
+void PolygonManager::choose(int id){
+    if(id < 0 || std::find(m_choosed_plg_id.begin(), m_choosed_plg_id.end(), id) != m_choosed_plg_id.end())
+        return;
+    m_choosed_plg_id.push_back(id);
+}
+
+void PolygonManager::unchoose_all(){
+    m_choosed_plg_id.clear();
+}
+
+void PolygonManager::translate(int id, QPointF pt){
+    if(id < 0 || id >= m_polygons.size())
+        return;
+    m_polygons[id].translate(pt);
+}
+
+int PolygonManager::get_click_id(qreal x, qreal y){
+    QPointF pt_logic;
+    pt_logic.rx() = x / m_view_scale + m_view_translate.rx() - this->width() / 2 / m_view_scale;
+    pt_logic.ry() = -y / m_view_scale + m_view_translate.ry() + this->height() / 2 / m_view_scale;
+    int id = 0;
+    for(auto &plg : m_polygons){
+        if(plg.is_pt_inside(pt_logic))
+            return id;
+        ++id;
+    }
+    return -1;
+}
+
+void PolygonManager::view_move(QPointF pt){
+    const qreal d = 10;
+    m_view_translate.setX(d / m_view_scale * pt.rx() + m_view_translate.rx());
+    m_view_translate.setY(d / m_view_scale * pt.ry() + m_view_translate.ry());
+}
+
+void PolygonManager::view_zoom(bool bigger){
+    m_view_scale += bigger ? 0.25 : -0.25;
+    m_view_scale = m_view_scale < 0.25 ? 0.25 : m_view_scale;
 }
 
 QString PolygonManager::new_polygon_by_string(QString input){
@@ -55,8 +101,6 @@ QString PolygonManager::new_polygon_by_string(QString input){
     QString res = plg.init(vtx_description);
     if(res == "ok")
         m_polygons.push_back(plg);
-    if(m_polygons.size() >= 2)
-        test_clip();
     return res;
 }
 

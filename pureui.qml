@@ -25,12 +25,13 @@ ApplicationWindow {
 
         Grid {
             id: grid_op_panel
+            transformOrigin: Item.Center
             anchors.rightMargin: 0
             anchors.bottomMargin: 0
             anchors.leftMargin: 0
             anchors.topMargin: 0
             anchors.fill: parent
-            spacing: 27
+            spacing: 20
             columns: 3
 
             ToolButton {
@@ -42,7 +43,7 @@ ApplicationWindow {
 
             ToolButton {
                 id: bt_color
-                text: qsTr("设置颜色")
+                text: qsTr("颜色")
                 icon.source:"resources/op_color.png"
             }
 
@@ -50,6 +51,17 @@ ApplicationWindow {
                 id: bt_clip
                 text: qsTr("裁剪")
                 icon.source: "resources/op_clip.png"
+            }
+            ToolButton {
+                id: bt_navagate
+                text: qsTr("视口")
+                icon.source: "resources/op_navagate.png"
+            }
+
+            ToolButton {
+                id: bt_translate
+                text: qsTr("平移")
+                icon.source: "resources/op_translate.png"
             }
 
         }
@@ -71,7 +83,7 @@ ApplicationWindow {
         z: 0
         Item {
             id: info_new
-            visible: true
+            visible: false
             anchors.fill: parent
             z:1
 
@@ -256,6 +268,143 @@ ApplicationWindow {
                 }
             }
         }
+
+        Item {
+            id: info_navagate
+            visible: false
+            anchors.fill: parent
+
+            TextArea {
+                id: text_navagate
+                height: 100
+                text: qsTr("按方向键移动视口中心\n滑动滚轮进行缩放\n当前坐标:(128, 128)\n当前放大比例:5")
+                verticalAlignment: Text.AlignVCenter
+                horizontalAlignment: Text.AlignLeft
+                anchors.right: parent.right
+                anchors.rightMargin: 0
+                anchors.left: parent.left
+                anchors.leftMargin: 0
+                anchors.top: parent.top
+                anchors.topMargin: 0
+                readOnly: true
+            }
+        }
+
+        Item {
+            id: info_translate
+            anchors.fill: parent
+
+            TextField {
+                id: tf_translate_x
+                x: 128
+                y: 95
+                width: 73
+                height: 40
+                text: qsTr("")
+                anchors.horizontalCenter: parent.horizontalCenter
+            }
+
+            Text {
+                id: txt_translate_x
+                x: -27
+                width: 67
+                height: 40
+                text: qsTr("平移x")
+                anchors.top: tf_translate_x.top
+                anchors.topMargin: 0
+                anchors.right: tf_translate_x.left
+                anchors.rightMargin: 0
+                verticalAlignment: Text.AlignVCenter
+                horizontalAlignment: Text.AlignHCenter
+                font.pixelSize: 20
+            }
+
+            TextField {
+                id: tf_translate_y
+                x: 128
+                y: 161
+                width: 73
+                height: 40
+                text: qsTr("")
+                anchors.horizontalCenter: parent.horizontalCenter
+            }
+
+            Text {
+                id: txt_translate_y
+                x: 61
+                width: 67
+                height: 40
+                text: qsTr("平移y")
+                anchors.right: tf_translate_y.left
+                anchors.rightMargin: 0
+                anchors.top: tf_translate_y.top
+                anchors.topMargin: 0
+                horizontalAlignment: Text.AlignHCenter
+                font.pixelSize: 20
+                verticalAlignment: Text.AlignVCenter
+            }
+
+            TextField {
+                id: tf_translate_plg_id
+                x: 128
+                y: 25
+                width: 73
+                height: 40
+                text: qsTr("")
+                anchors.horizontalCenter: parent.horizontalCenter
+            }
+
+            Text {
+                id: txt_translate_plg_id
+                x: -73
+                width: 112
+                height: 40
+                text: qsTr("多边形编号")
+                horizontalAlignment: Text.AlignHCenter
+                font.pixelSize: 20
+                verticalAlignment: Text.AlignVCenter
+                anchors.top: tf_translate_plg_id.top
+                anchors.rightMargin: 0
+                anchors.right: tf_translate_plg_id.left
+                anchors.topMargin: 0
+            }
+
+            Button {
+                id: btn_translate_ok
+                x: 101
+                y: 232
+                text: qsTr("确定")
+                anchors.horizontalCenter: parent.horizontalCenter
+            }
+
+            Button {
+                id: bt_translate_select_plg
+                width: 77
+                height: 40
+                text: qsTr("选择")
+                anchors.left: tf_translate_plg_id.right
+                anchors.leftMargin: 20
+                anchors.top: tf_translate_plg_id.top
+                anchors.topMargin: 0
+            }
+
+            Text {
+                id: txt_choose
+                x: 215
+                y: 25
+                width: 61
+                height: 40
+                text: qsTr("在右侧点击选择")
+                anchors.horizontalCenter: bt_translate_select_plg.horizontalCenter
+                horizontalAlignment: Text.AlignHCenter
+                wrapMode: Text.WrapAnywhere
+                font.pixelSize: 15
+            }
+        }
+
+
+
+
     }
 
     Rectangle {
@@ -276,9 +425,11 @@ ApplicationWindow {
         }
     }
 
+
+
 }
 
 /*##^## Designer {
-    D{i:26;anchors_height:100;anchors_width:100}
+    D{i:38;anchors_x:206;anchors_y:25}
 }
  ##^##*/

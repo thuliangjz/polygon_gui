@@ -64,35 +64,6 @@ QString Polygon::init(const plg_vertexs& vertexes){
             return err_intersect;
         }
     }
-    /*
-    //检测除相邻两条边外，任意两条边不相交
-    vtxs_loop vtx_total;
-    vector<line_seg> edges_total;
-    vector<pair<int, int>> adj_lst;    //adj_lst[i]记录了edges_total中第i号相邻的边的序号(first是和起点相邻,second和终点相邻)
-    for(auto &loop : vertexes){
-        int idx_loop_start = edges_total.size();
-        vtxs_loop loop_it(loop);
-        loop_it.push_back(loop_it.front());
-        for(int i = 0; i < loop_it.size() - 1; ++i){
-            edges_total.push_back(line_seg(loop_it[i], loop_it[i + 1]));
-            adj_lst.push_back(pair<int, int>(edges_total.size() - 2, edges_total.size()));
-        }
-        adj_lst[idx_loop_start].first = edges_total.size() - 1;
-        adj_lst[edges_total.size() - 1].second = idx_loop_start;
-    }
-    for(int i =0; i < edges_total.size() - 1; ++i){
-        for(int j = i + 1; j < edges_total.size(); ++j){
-            if(j == adj_lst[i].first || j == adj_lst[i].second)
-                continue;
-            int indicator1 = get_online_indicator<int>(edges_total[i], edges_total[j].first) *
-                    get_online_indicator<int>(edges_total[i], edges_total[j].second),
-                indicator2 = get_online_indicator<int>(edges_total[j], edges_total[i].first) *
-                    get_online_indicator<int>(edges_total[j], edges_total[i].second);
-            if(indicator1 <= 0 && indicator2 <= 0)
-                return err_intersect;
-        }
-    }
-    */
     //检测所有内环上的点位于外环围成的区域的闭包中
     vector<line_seg> outer_loop_edge;
     for(int i = 0; i + 1< vertexes[0].size(); ++i){
@@ -207,7 +178,8 @@ inline int round(T x){
     return xi;
 }
 
-void Polygon::paint(QPainter* painter, pair<float, float> translate, float scale){
+void Polygon::paint(QPainter* painter, pair<float, float> translate, float scale, bool choosed){
+    //tanslate是窗口左上角在世界坐标系中的坐标，scale是显示的比例尺
     plg_vertexs vtxs_view(m_vertex);
     for(auto &loop:vtxs_view){
         for(auto &pt:loop){
@@ -227,11 +199,11 @@ void Polygon::paint(QPainter* painter, pair<float, float> translate, float scale
         }
     }
     pair<int, int> pt_belt;
-    QPixmap map = paint_local_img(vtxs_view, pt_belt);
+    QPixmap map = paint_local_img(vtxs_view, pt_belt, choosed);
     painter->drawPixmap(pt_belt.first, pt_belt.second, map);
 }
 
-QPixmap Polygon::paint_local_img(const plg_vertexs& vtxs_view, pair<int, int>&pt_belt){
+QPixmap Polygon::paint_local_img(const plg_vertexs& vtxs_view, pair<int, int>&pt_belt, bool choosed){
     //在pt_belt中返回图片应该被绘制的点
     //vtxs_view是在屏幕坐标系下的坐标
     plg_vertexs vtxs_map(vtxs_view);
@@ -345,7 +317,10 @@ QPixmap Polygon::paint_local_img(const plg_vertexs& vtxs_view, pair<int, int>&pt
     //绘制顶点
     QPixmap pixmap = QPixmap::fromImage(img_inside);
     QPainter painter_map(&pixmap);
-    painter_map.setPen(m_color_edge);
+    QPen pen(choosed ? Qt::DashLine : Qt::SolidLine);
+    pen.setColor(m_color_edge);
+    pen.setWidth(3);
+    painter_map.setPen(pen);
     for(auto &loop:vtxs_map){
         for(int i = 0; i + 1 < loop.size(); ++i){
             int x1 = loop[i].first - left + margin, y1 = loop[i].second - top + margin,
@@ -713,4 +688,19 @@ double get_winding_d_i(pair<double, double> pt_d, vector<pair<int, int>>& vtxs_i
         vtxs_double.push_back(pair<double, double>(pt.first, pt.second));
     }
     return get_winding<double>(pt_d, vtxs_double);
+}
+
+bool Polygon::is_pt_inside(QPointF pt){
+    const double epsilon = 1e-5;
+    return abs(get_winding<int>(pair<int, int>(pt.rx(), pt.ry()), m_vertex[0])) > epsilon;
+}
+
+void Polygon::translate(QPointF pt){
+    int dx = round<qreal>(pt.rx()), dy = round<qreal>(pt.ry());
+    for(auto &loop : m_vertex){
+        for(auto &pt : loop){
+            pt.first += dx;
+            pt.second += dy;
+        }
+    }
 }
