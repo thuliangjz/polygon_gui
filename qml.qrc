@@ -14,5 +14,8 @@
         <file>RotateInfo.qml</file>
         <file>resources/op_rotate.png</file>
         <file>ColorInfo.qml</file>
+        <file>ClipInfo.qml</file>
+        <file>FlipInfo.qml</file>
+        <file>resources/op_flip.png</file>
     </qresource>
 </RCC>

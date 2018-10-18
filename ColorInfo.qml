@@ -57,6 +57,7 @@ Item {
         height: 40
         text: qsTr("")
         anchors.horizontalCenter: parent.horizontalCenter
+        readOnly: true
     }
     Text {
         id: txt_color_select

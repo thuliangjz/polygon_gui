@@ -26,6 +26,8 @@ public:
     Q_INVOKABLE QColor get_edge_color(int id);
     Q_INVOKABLE QColor get_inner_color(int id);
     Q_INVOKABLE void set_color(int id, QColor edge, QColor inner);
+    Q_INVOKABLE void clip(int id_main, int id_clip);
+    Q_INVOKABLE void flip(int id, QString axis);
     QPointF view_translate()const{return  m_view_translate;}
     qreal view_scale()const{return m_view_scale;}
 private:

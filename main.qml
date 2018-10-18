@@ -70,6 +70,11 @@ ApplicationWindow{
                 text: qsTr("旋转")
                 icon.source: "resources/op_rotate.png"
             }
+            ToolButton {
+                id: bt_flip
+                text: qsTr("翻转")
+                icon.source: "resources/op_flip.png"
+            }
 
         }
 
@@ -104,6 +109,14 @@ ApplicationWindow{
         }
         ColorInfo {
             id: color_info
+            z: 1
+        }
+        ClipInfo {
+            id: clip_info
+            z: 1
+        }
+        FlipInfo {
+            id: flip_info
             z: 1
         }
     }
@@ -146,6 +159,16 @@ ApplicationWindow{
             visible: color_info.choosing_plg
             anchors.fill: parent
         }
+        MouseArea {
+            id:ma_clip
+            anchors.fill: parent
+            visible: clip_info.plg_choosing_type !== "no"
+        }
+        MouseArea {
+            id: ma_flip
+            anchors.fill: parent
+            visible: flip_info.visible
+        }
 
     }
     function disable_info(){
@@ -164,17 +187,23 @@ ApplicationWindow{
         bt_translate.clicked.connect(translate_info.activate)
         bt_rotate.clicked.connect(rotate_info.activate)
         bt_color.clicked.connect(color_info.activate)
+        bt_clip.clicked.connect(clip_info.activate)
+        bt_flip.clicked.connect(flip_info.activate)
         navagate_info.Keys.pressed.connect(navagate_info.keyPressedHandler(polygon_manager))
         ma_navagate.wheel.connect(navagate_info.wheelHandler(polygon_manager))
         ma_translate.clicked.connect(translate_info.clickChooseHandler(polygon_manager))
         ma_rotate.clicked.connect(rotate_info.clickPlgHandler(polygon_manager))
         ma_rotate.clicked.connect(rotate_info.clickCenterHandler(polygon_manager))
         ma_color.clicked.connect(color_info.clickPlgHandler(polygon_manager))
+        ma_clip.clicked.connect(clip_info.clickPlgHandler(polygon_manager))
+        ma_flip.clicked.connect(flip_info.clickPlgHandler(polygon_manager))
+        flip_info.Keys.pressed.connect(flip_info.keyPressHandler(polygon_manager))
+
         new_info.polygonInputOk.connect(new_info.polygonInputResponse(polygon_manager))
         translate_info.translate.connect(translate_info.translateOkHandler(polygon_manager))
         rotate_info.rotate.connect(rotate_info.rotateOkHandler(polygon_manager))
         color_info.colorSetOk.connect(color_info.colorSetOkHandler(polygon_manager))
-
+        clip_info.clip.connect(clip_info.clicpOkHandler(polygon_manager))
 //        new_info.clickNewClose.connect(click_new_trace.closeCurrentLoop)
 //        new_info.clickNewCancel.connect(click_new_trace.traceClear)
 

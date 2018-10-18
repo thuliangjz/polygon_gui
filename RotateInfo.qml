@@ -36,6 +36,7 @@ Item {
                 tf_rotate_select.text = ""
                 plg_id = -1;
                 plgManager.unchoose_all()
+                plgManager.update()
                 return
             }
             info_rotate.plg_id = plgId

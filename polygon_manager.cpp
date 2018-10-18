@@ -21,20 +21,41 @@ void PolygonManager::paint(QPainter *painter){
         ++idx_plg;
     }
 }
+
+void PolygonManager::flip(int id, QString axis){
+    if(id < 0 || id >= m_polygons.size())
+        return;
+    m_polygons[id].flip(axis);
+}
+
+void PolygonManager::clip(int id_main, int id_clip){
+    if(id_main < 0 || id_main >= m_polygons.size() || id_clip < 0 || id_clip >= m_polygons.size() || id_main == id_clip)
+        return;
+    vector<plg_vertexs> results = m_polygons[id_clip].clip(m_polygons[id_main]);
+    for(auto &vertexs : results){
+        Polygon p;
+        QString res = p.init(vertexs);
+        if(res == "ok"){
+            m_polygons.push_back(p);
+        }
+    }
+    m_polygons.erase(std::next(m_polygons.begin(), id_main));
+}
+
 void PolygonManager::set_color(int id, QColor edge, QColor inner){
-    if(id < 0 || id > m_polygons.size())
+    if(id < 0 || id >= m_polygons.size())
         return;
     m_polygons[id].set_color(edge, inner);
 }
 QColor PolygonManager::get_edge_color(int id){
-    if(id < 0 || id > m_polygons.size()){
+    if(id < 0 || id >= m_polygons.size()){
         return QColor();
     }
     return m_polygons[id].get_edge_color();
 }
 
 QColor PolygonManager::get_inner_color(int id){
-    if(id < 0 || id > m_polygons.size())
+    if(id < 0 || id >= m_polygons.size())
         return QColor();
     return m_polygons[id].get_inner_color();
 }
@@ -47,7 +68,7 @@ QPointF PolygonManager::transform(QPointF pt){
 }
 
 void PolygonManager::rotate(int id, QPointF center, qreal angle){
-    if(id < 0 || id > m_polygons.size())
+    if(id < 0 || id >= m_polygons.size())
         return;
     m_polygons[id].rotate(center, angle);
 }
@@ -70,11 +91,10 @@ void PolygonManager::translate(int id, QPointF pt){
 
 int PolygonManager::get_click_id(qreal x, qreal y){
     QPointF pt_logic = transform(QPointF(x, y));
-    int id = 0;
-    for(auto &plg : m_polygons){
+    for(int i = m_polygons.size() - 1; i >= 0; --i){
+        auto &plg = m_polygons[i];
         if(plg.is_pt_inside(pt_logic))
-            return id;
-        ++id;
+            return i;
     }
     return -1;
 }

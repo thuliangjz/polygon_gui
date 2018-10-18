@@ -716,3 +716,13 @@ void Polygon::rotate(QPointF center, qreal angle){
         }
     }
 }
+
+void Polygon::flip(QString axis){
+    pair<int, int> factor = axis == "x" ? pair<int, int>(1, -1) : pair<int, int>(-1, 1);
+    for(auto &loop:m_vertex){
+        for(auto &pt : loop){
+            pt.first *= factor.first;
+            pt.second *= factor.second;
+        }
+    }
+}

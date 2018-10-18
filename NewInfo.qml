@@ -60,6 +60,7 @@ Item {
                 height: 40
                 text: qsTr("输入新多边形")
                 z: 2
+                visible: false
                 checked: !tab_new_click.checked
                 font.capitalization: Font.MixedCase
                 anchors.left: parent.left
@@ -70,6 +71,7 @@ Item {
 
             TabButton {
                 id: tab_new_click
+                visible: false
                 width: tab_new_input.width
                 height: 40
                 text: qsTr("点击新多边形")
@@ -84,14 +86,7 @@ Item {
             Item {
                 id: group_input
                 visible: tab_new_input.checked
-                anchors.right: parent.right
-                anchors.rightMargin: 0
-                anchors.bottom: parent.bottom
-                anchors.bottomMargin: 0
-                anchors.top: tab_new_input.bottom
-                anchors.topMargin: 0
-                anchors.left: parent.left
-                anchors.leftMargin: 0
+                anchors.fill:parent
                 Text {
                     id: text_input_info
                     x: 85
@@ -101,7 +96,7 @@ Item {
                     anchors.top: parent.top
                     anchors.topMargin: 0
                     anchors.horizontalCenter: parent.horizontalCenter
-                    font.pixelSize: 12
+                    font.pixelSize: 15
                 }
 
                 ScrollView {
@@ -112,7 +107,7 @@ Item {
                     anchors.horizontalCenterOffset: 0
                     anchors.horizontalCenter: parent.horizontalCenter
                     anchors.top: parent.top
-                    anchors.topMargin: 60
+                    anchors.topMargin: 100
 
                     TextArea {
                         id: edit_input
