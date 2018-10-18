@@ -20,6 +20,7 @@ public:
     plg_vertexs get_vertex_copy()const;
     bool is_pt_inside(QPointF pt);
     void translate(QPointF pt);
+    void rotate(QPointF center, qreal angle);
 private:
     QPixmap paint_local_img(const plg_vertexs& vtxs_view, pair<int, int>& pt_belt, bool choosed = false);
 private:

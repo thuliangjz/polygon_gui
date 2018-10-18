@@ -21,6 +21,8 @@ public:
     Q_INVOKABLE void choose(int id);
     Q_INVOKABLE void translate(int id, QPointF pt);
     Q_INVOKABLE void unchoose_all();
+    Q_INVOKABLE QPointF transform(QPointF pt);
+    Q_INVOKABLE void rotate(int id, QPointF center, qreal angle);
     QPointF view_translate()const{return  m_view_translate;}
     qreal view_scale()const{return m_view_scale;}
 private:

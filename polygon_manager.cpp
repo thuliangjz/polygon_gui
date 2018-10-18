@@ -22,6 +22,19 @@ void PolygonManager::paint(QPainter *painter){
     }
 }
 
+QPointF PolygonManager::transform(QPointF pt){
+    QPointF pt_logic;
+    pt_logic.rx() = pt.x() / m_view_scale + m_view_translate.rx() - this->width() / 2 / m_view_scale;
+    pt_logic.ry() = -pt.y() / m_view_scale + m_view_translate.ry() + this->height() / 2 / m_view_scale;
+    return pt_logic;
+}
+
+void PolygonManager::rotate(int id, QPointF center, qreal angle){
+    if(id < 0 || id > m_polygons.size())
+        return;
+    m_polygons[id].rotate(center, angle);
+}
+
 void PolygonManager::choose(int id){
     if(id < 0 || std::find(m_choosed_plg_id.begin(), m_choosed_plg_id.end(), id) != m_choosed_plg_id.end())
         return;
@@ -39,9 +52,7 @@ void PolygonManager::translate(int id, QPointF pt){
 }
 
 int PolygonManager::get_click_id(qreal x, qreal y){
-    QPointF pt_logic;
-    pt_logic.rx() = x / m_view_scale + m_view_translate.rx() - this->width() / 2 / m_view_scale;
-    pt_logic.ry() = -y / m_view_scale + m_view_translate.ry() + this->height() / 2 / m_view_scale;
+    QPointF pt_logic = transform(QPointF(x, y));
     int id = 0;
     for(auto &plg : m_polygons){
         if(plg.is_pt_inside(pt_logic))

@@ -704,3 +704,15 @@ void Polygon::translate(QPointF pt){
         }
     }
 }
+
+void Polygon::rotate(QPointF center, qreal angle){
+    for(auto &loop : m_vertex){
+        for(auto &pt : loop){
+            pair<double, double> p_d(pt.first - center.x(), pt.second - center.y());
+            double theta = 3.141592653589793 * angle / 180;
+            double c = cos(theta), s = sin(theta);
+            pt.first = round<double>(c * p_d.first - s * p_d.second);
+            pt.second = round<double>(s * p_d.first + c * p_d.second);
+        }
+    }
+}

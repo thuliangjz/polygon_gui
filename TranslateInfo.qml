@@ -4,6 +4,7 @@ import QtQuick.Dialogs 1.2
 Item {
     id: info_translate
     anchors.fill: parent
+    visible: false
     property int plg_id_translate: -1
     property bool choosing_plg: false
     signal translate(int plgId, point pt)
@@ -27,11 +28,13 @@ Item {
             if(plgId < 0){
                 tf_translate_plg_id.text = ""
                 plg_id_translate = -1
+                plgManager.unchoose_all()
                 return
             }
             info_translate.plg_id_translate = plgId
             tf_translate_plg_id.text = plgId.toString()
             plgManager.choose(plgId)
+            plgManager.update()
         }
     }
 

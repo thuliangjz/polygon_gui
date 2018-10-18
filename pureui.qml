@@ -64,6 +64,12 @@ ApplicationWindow {
                 icon.source: "resources/op_translate.png"
             }
 
+            ToolButton {
+                id: bt_rotate
+                text: qsTr("旋转")
+                icon.source: "resources/op_rotate.png"
+            }
+
         }
 
     }
@@ -292,6 +298,7 @@ ApplicationWindow {
 
         Item {
             id: info_translate
+            visible: false
             anchors.fill: parent
 
             TextField {
@@ -389,7 +396,7 @@ ApplicationWindow {
             }
 
             Text {
-                id: txt_choose
+                id: txt_translate_choose
                 x: 215
                 y: 25
                 width: 61
@@ -400,6 +407,151 @@ ApplicationWindow {
                 wrapMode: Text.WrapAnywhere
                 font.pixelSize: 15
             }
+        }
+
+
+        Item {
+            id: info_rotate
+            anchors.fill: parent
+
+            Slider {
+                id: slider_rotate_angle
+                x: 95
+                y: 198
+                width: 199
+                height: 40
+                to: 360
+                value: 6
+            }
+            TextField {
+                id: tf_rotate_select
+                x: 128
+                y: 25
+                width: 73
+                height: 40
+                text: qsTr("")
+                anchors.horizontalCenter: parent.horizontalCenter
+            }
+            Text {
+                id: txt_rotate_select
+                x: -73
+                width: 112
+                height: 40
+                text: qsTr("多边形编号")
+                horizontalAlignment: Text.AlignHCenter
+                font.pixelSize: 20
+                verticalAlignment: Text.AlignVCenter
+                anchors.top: tf_rotate_select.top
+                anchors.rightMargin: 0
+                anchors.right: tf_rotate_select.left
+                anchors.topMargin: 0
+            }
+            Button {
+                id: bt_rotate_select
+                width: 77
+                height: 40
+                text: qsTr("选择")
+                anchors.left: tf_rotate_select.right
+                anchors.leftMargin: 20
+                anchors.top: tf_rotate_select.top
+                anchors.topMargin: 0
+            }
+            Text {
+                id: txt_rotate_selecting
+                x: 215
+                y: 25
+                width: 61
+                height: 40
+                text: qsTr("在右侧点击选择")
+                visible: false
+                anchors.horizontalCenter: bt_rotate_select.horizontalCenter
+                horizontalAlignment: Text.AlignHCenter
+                wrapMode: Text.WrapAnywhere
+                font.pixelSize: 15
+            }
+
+            TextField {
+                id: tf_rotate_center
+                x: 95
+                y: 121
+                width: 111
+                height: 40
+            }
+
+            Text {
+                id: txt_rotate_center
+                x: 8
+                y: 121
+                width: 90
+                height: 40
+                text: qsTr("旋转中心")
+                anchors.right: tf_rotate_center.left
+                anchors.rightMargin: -3
+                verticalAlignment: Text.AlignVCenter
+                horizontalAlignment: Text.AlignHCenter
+                font.pixelSize: 20
+            }
+
+            Button {
+                id: bt_rotate_center
+                x: 215
+                y: 121
+                width: 77
+                height: 40
+                text: qsTr("选择")
+                anchors.leftMargin: 9
+                anchors.left: tf_rotate_center.right
+                anchors.top: tf_rotate_center.top
+                anchors.topMargin: 0
+            }
+
+            Text {
+                id: txt_rotate_center_selecting
+                x: 223
+                y: 121
+                width: 61
+                height: 40
+                text: qsTr("在右侧点击选择")
+                anchors.horizontalCenterOffset: 0
+                visible: false
+                horizontalAlignment: Text.AlignHCenter
+                font.pixelSize: 15
+                anchors.horizontalCenter: bt_rotate_center.horizontalCenter
+                wrapMode: Text.WrapAnywhere
+            }
+
+            Text {
+                id: txt_rotate_angle
+                x: 8
+                y: 202
+                text: qsTr("旋转角度")
+                font.pixelSize: 20
+            }
+
+            Text {
+                id: txt_rotate_angle_indicator
+                x: 162
+                y: 233
+                width: 65
+                height: 26
+                anchors.horizontalCenterOffset: 0
+                anchors.horizontalCenter: slider_rotate_angle.horizontalCenter
+                verticalAlignment: Text.AlignTop
+                horizontalAlignment: Text.AlignHCenter
+                font.pixelSize: 15
+            }
+
+            Button {
+                id: bt_rotate_ok
+                x: 101
+                y: 255
+                text: qsTr("确定")
+                anchors.bottom: parent.bottom
+                anchors.bottomMargin: 15
+                anchors.horizontalCenter: parent.horizontalCenter
+            }
+
+
         }
 
 
@@ -424,6 +576,7 @@ ApplicationWindow {
             anchors.fill: parent
         }
     }
+
 
 
 
