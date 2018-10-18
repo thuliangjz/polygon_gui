@@ -13,5 +13,6 @@
         <file>resources/op_translate.png</file>
         <file>RotateInfo.qml</file>
         <file>resources/op_rotate.png</file>
+        <file>ColorInfo.qml</file>
     </qresource>
 </RCC>

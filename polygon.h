@@ -21,6 +21,9 @@ public:
     bool is_pt_inside(QPointF pt);
     void translate(QPointF pt);
     void rotate(QPointF center, qreal angle);
+    QColor get_edge_color()const{return m_color_edge;}
+    QColor get_inner_color()const{return m_color_inside;}
+    void set_color(QColor edge, QColor inner){m_color_edge = edge; m_color_inside = inner;}
 private:
     QPixmap paint_local_img(const plg_vertexs& vtxs_view, pair<int, int>& pt_belt, bool choosed = false);
 private:

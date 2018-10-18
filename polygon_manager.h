@@ -23,6 +23,9 @@ public:
     Q_INVOKABLE void unchoose_all();
     Q_INVOKABLE QPointF transform(QPointF pt);
     Q_INVOKABLE void rotate(int id, QPointF center, qreal angle);
+    Q_INVOKABLE QColor get_edge_color(int id);
+    Q_INVOKABLE QColor get_inner_color(int id);
+    Q_INVOKABLE void set_color(int id, QColor edge, QColor inner);
     QPointF view_translate()const{return  m_view_translate;}
     qreal view_scale()const{return m_view_scale;}
 private:

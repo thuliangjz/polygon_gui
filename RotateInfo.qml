@@ -4,6 +4,7 @@ import QtQuick.Controls 2.4
 Item {
     id: info_rotate
     anchors.fill: parent
+    visible: false
     property bool choosing_plg: false
     property bool choosing_center: false
     property int plg_id: -1

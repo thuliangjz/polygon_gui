@@ -21,6 +21,23 @@ void PolygonManager::paint(QPainter *painter){
         ++idx_plg;
     }
 }
+void PolygonManager::set_color(int id, QColor edge, QColor inner){
+    if(id < 0 || id > m_polygons.size())
+        return;
+    m_polygons[id].set_color(edge, inner);
+}
+QColor PolygonManager::get_edge_color(int id){
+    if(id < 0 || id > m_polygons.size()){
+        return QColor();
+    }
+    return m_polygons[id].get_edge_color();
+}
+
+QColor PolygonManager::get_inner_color(int id){
+    if(id < 0 || id > m_polygons.size())
+        return QColor();
+    return m_polygons[id].get_inner_color();
+}
 
 QPointF PolygonManager::transform(QPointF pt){
     QPointF pt_logic;

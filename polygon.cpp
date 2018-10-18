@@ -27,7 +27,7 @@ float get_signed_area(const vector<pair<int, int>>& loop);
 
 Polygon::Polygon():
     m_color_edge(0, 0, 0),
-    m_color_inside(0, 0, 255)
+    m_color_inside(255, 85, 255)
 {
 
 }

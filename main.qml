@@ -102,6 +102,10 @@ ApplicationWindow{
             id: rotate_info
             z: 1
         }
+        ColorInfo {
+            id: color_info
+            z: 1
+        }
     }
 
     Rectangle {
@@ -137,6 +141,11 @@ ApplicationWindow{
             visible: rotate_info.choosing_plg || rotate_info.choosing_center
             anchors.fill: parent
         }
+        MouseArea {
+            id: ma_color
+            visible: color_info.choosing_plg
+            anchors.fill: parent
+        }
 
     }
     function disable_info(){
@@ -150,20 +159,22 @@ ApplicationWindow{
             grid_op_panel.children[i].clicked.connect(function(){
                 polygon_manager.unchoose_all()
                 polygon_manager.update()
-            })
-        }
-        bt_new.clicked.connect(new_info.activate)
+            }) } bt_new.clicked.connect(new_info.activate)
         bt_navagate.clicked.connect(navagate_info.activate)
         bt_translate.clicked.connect(translate_info.activate)
         bt_rotate.clicked.connect(rotate_info.activate)
+        bt_color.clicked.connect(color_info.activate)
         navagate_info.Keys.pressed.connect(navagate_info.keyPressedHandler(polygon_manager))
         ma_navagate.wheel.connect(navagate_info.wheelHandler(polygon_manager))
         ma_translate.clicked.connect(translate_info.clickChooseHandler(polygon_manager))
         ma_rotate.clicked.connect(rotate_info.clickPlgHandler(polygon_manager))
         ma_rotate.clicked.connect(rotate_info.clickCenterHandler(polygon_manager))
+        ma_color.clicked.connect(color_info.clickPlgHandler(polygon_manager))
         new_info.polygonInputOk.connect(new_info.polygonInputResponse(polygon_manager))
         translate_info.translate.connect(translate_info.translateOkHandler(polygon_manager))
         rotate_info.rotate.connect(rotate_info.rotateOkHandler(polygon_manager))
+        color_info.colorSetOk.connect(color_info.colorSetOkHandler(polygon_manager))
+
 //        new_info.clickNewClose.connect(click_new_trace.closeCurrentLoop)
 //        new_info.clickNewCancel.connect(click_new_trace.traceClear)
 

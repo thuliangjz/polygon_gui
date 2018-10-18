@@ -2,6 +2,7 @@ import QtQuick 2.9
 import QtQuick.Window 2.2
 import QtQuick.Controls 2.4
 import QtQuick.Controls.Styles 1.4
+import QtQuick.Dialogs 1.0
 ApplicationWindow {
     id: applicationWindow
     visible: true
@@ -413,7 +414,7 @@ ApplicationWindow {
         Item {
             id: info_rotate
             anchors.fill: parent
-
+            visible: false
             Slider {
                 id: slider_rotate_angle
                 x: 95
@@ -555,7 +556,133 @@ ApplicationWindow {
         }
 
 
+        Item {
+            id: info_color
+            anchors.fill: parent
+            TextField {
+                id: tf_color_select
+                x: 128
+                y: 25
+                width: 73
+                height: 40
+                text: qsTr("")
+                anchors.horizontalCenter: parent.horizontalCenter
+            }
+            Text {
+                id: txt_color_select
+                x: -73
+                width: 112
+                height: 40
+                text: qsTr("多边形编号")
+                horizontalAlignment: Text.AlignHCenter
+                font.pixelSize: 20
+                verticalAlignment: Text.AlignVCenter
+                anchors.top: tf_color_select.top
+                anchors.rightMargin: 0
+                anchors.right: tf_color_select.left
+                anchors.topMargin: 0
+            }
+            Button {
+                id: bt_color_select
+                width: 77
+                height: 40
+                text: qsTr("选择")
+                anchors.left: tf_color_select.right
+                anchors.leftMargin: 20
+                anchors.top: tf_color_select.top
+                anchors.topMargin: 0
+            }
+            Text {
+                id: txt_color_selecting
+                x: 215
+                y: 25
+                width: 61
+                height: 40
+                text: qsTr("在右侧点击选择")
+                visible: false
+                anchors.horizontalCenter: bt_color_select.horizontalCenter
+                horizontalAlignment: Text.AlignHCenter
+                wrapMode: Text.WrapAnywhere
+                font.pixelSize: 15
+            }
 
+            Text {
+                id: txt_color_edge
+                x: 9
+                y: 95
+                width: 98
+                height: 29
+                text: qsTr("边界颜色")
+                anchors.verticalCenter: rect_color_edge.verticalCenter
+                verticalAlignment: Text.AlignVCenter
+                horizontalAlignment: Text.AlignHCenter
+                font.pixelSize: 20
+            }
+
+            Rectangle {
+                id: rect_color_edge
+                x: 18
+                width: 80
+                height: 40
+                color: "#ffffff"
+                anchors.top: tf_color_select.bottom
+                anchors.topMargin: 25
+                anchors.horizontalCenter: parent.horizontalCenter
+            }
+
+            Button {
+                id: bt_color_edge
+                y: 90
+                width: 77
+                height: 40
+                text: qsTr("选择")
+                anchors.verticalCenter: rect_color_edge.verticalCenter
+                anchors.left: rect_color_edge.right
+                anchors.leftMargin: 16
+            }
+
+            Text {
+                id: txt_color_inner
+                x: 18
+                y: 167
+                text: qsTr("内部颜色")
+                anchors.verticalCenter: rect_color_inner.verticalCenter
+                font.pixelSize: 20
+            }
+
+            Rectangle {
+                id: rect_color_inner
+                x: 17
+                width: 80
+                height: 40
+                color: "#ffffff"
+                anchors.top: rect_color_edge.bottom
+                anchors.topMargin: 25
+                anchors.horizontalCenterOffset: 0
+                anchors.horizontalCenter: parent.horizontalCenter
+            }
+
+            Button {
+                id: bt_color_inner
+                y: 155
+                width: 77
+                height: 40
+                text: qsTr("选择")
+                anchors.leftMargin: 16
+                anchors.left: rect_color_inner.right
+                anchors.verticalCenter: rect_color_inner.verticalCenter
+            }
+
+            Button {
+                id: btn_color_ok
+                x: 101
+                y: 229
+                text: qsTr("确定")
+                anchors.bottom: parent.bottom
+                anchors.bottomMargin: 40
+            }
+
+        }
 
     }
 
@@ -583,6 +710,7 @@ ApplicationWindow {
 }
 
 /*##^## Designer {
-    D{i:38;anchors_x:206;anchors_y:25}
+    D{i:38;anchors_x:206;anchors_y:25}D{i:62;anchors_y:90}D{i:63;anchors_x:207}D{i:65;anchors_y:163}
+D{i:66;anchors_x:207}
 }
  ##^##*/

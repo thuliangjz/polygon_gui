@@ -29,6 +29,7 @@ Item {
                 tf_translate_plg_id.text = ""
                 plg_id_translate = -1
                 plgManager.unchoose_all()
+                plgManager.update()
                 return
             }
             info_translate.plg_id_translate = plgId
