@@ -1,7 +1,6 @@
 <RCC>
     <qresource prefix="/">
         <file>main.qml</file>
-        <file>pureui.qml</file>
         <file>NewInfo.qml</file>
         <file>resources/op_clip.png</file>
         <file>resources/op_color.png</file>
