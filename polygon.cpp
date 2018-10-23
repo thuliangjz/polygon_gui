@@ -88,7 +88,7 @@ QString Polygon::init(const plg_vertexs& vertexes){
                 continue;
             //检查点是否落在环内
             double angle = get_winding<int>(pt, vertexes[0]);
-            if(abs(angle) < epsilon){
+            if(std::abs(angle) < epsilon){
                 return err_inside_pt_out;
             }
         }
@@ -123,7 +123,7 @@ QString Polygon::init(const plg_vertexs& vertexes){
             intersects.push_back(x1 + (x2 - x1) * (y - y1) / (y2 - y1));
         }
         std::sort(intersects.begin(), intersects.end());
-        if(intersects.size() < 2 || abs(intersects[0] - intersects[1]) < epsilon)
+        if(intersects.size() < 2 || std::abs(intersects[0] - intersects[1]) < epsilon)
             return err_inner_pt_not_found;
 
         pair<double, double> pt_double((intersects[0] + intersects[1]) / 2, y);  //这个点一定是在环的内部的
@@ -400,7 +400,7 @@ vector<plg_vertexs> Polygon::clip(const Polygon& plg){
     //排除掉所有很快进入又很快出去（或者相反）的交点对
     for(auto &intersects : vec_intersect_main){
         for(int i = 0; i + 1 < intersects.size(); ++i){
-            if(abs(intersects[i].t - intersects[i + 1].t) < epsilon && intersects[i].is_enter != intersects[i + 1].is_enter){
+            if(std::abs(intersects[i].t - intersects[i + 1].t) < epsilon && intersects[i].is_enter != intersects[i + 1].is_enter){
                 intersect_valid[intersects[i].id] = false;
                 intersect_valid[intersects[i + 1].id] = false;
             }
@@ -408,7 +408,7 @@ vector<plg_vertexs> Polygon::clip(const Polygon& plg){
     }
     for(auto &intersects : vec_intersect_clip){
         for(int i = 0; i + 1 < intersects.size(); ++i){
-            if(abs(intersects[i].t - intersects[i + 1].t) < epsilon && intersects[i].is_enter != intersects[i + 1].is_enter){
+            if(std::abs(intersects[i].t - intersects[i + 1].t) < epsilon && intersects[i].is_enter != intersects[i + 1].is_enter){
                 intersect_valid[intersects[i].id] = false;
                 intersect_valid[intersects[i + 1].id] = false;
             }
@@ -549,19 +549,19 @@ vector<plg_vertexs> Polygon::clip(const Polygon& plg){
                 pt_clip = get_inner_point(vertexs_clip_plg[0], succeed);
         double winding_m_c = get_winding_d_i(pt_main, vertexs_clip_plg[0]),
                winding_c_m = get_winding_d_i(pt_clip, vertexs_main_plg[0]);
-        if(abs(winding_c_m) < epsilon && abs(winding_m_c) < epsilon)
+        if(std::abs(winding_c_m) < epsilon && std::abs(winding_m_c) < epsilon)
             return vector<plg_vertexs>();
-        float area_main = abs(get_signed_area(vertexs_main_plg[0]));
-        float area_clip = abs(get_signed_area(vertexs_clip_plg[0]));
+        float area_main = std::abs(get_signed_area(vertexs_main_plg[0]));
+        float area_clip = std::abs(get_signed_area(vertexs_clip_plg[0]));
         loop_vtxs &loop_out = area_main > area_clip ? vertexs_clip_plg[0] : vertexs_main_plg[0];
         //检查这个外环是否被包含在某个内环内部
         pair<double, double> pt_d = get_inner_point(loop_out, succeed);
         for(auto &loop : loops_in){
             double winding = get_winding_d_i(pt_d, loop);
-            if(abs(winding) > epsilon){
+            if(std::abs(winding) > epsilon){
                 //或者内环包含在外环内或者外环包含在内环内
-                float area_out = abs(get_signed_area(loop_out)),
-                      area_in = abs(get_signed_area(loop));
+                float area_out = std::abs(get_signed_area(loop_out)),
+                      area_in = std::abs(get_signed_area(loop));
                 if(area_in > area_out){
                     return vector<plg_vertexs>();
                 }
@@ -577,7 +577,7 @@ vector<plg_vertexs> Polygon::clip(const Polygon& plg){
             if(j == i)
                 continue;
             double winding = get_winding_d_i(pt_d, loops_in[j]);
-            if(abs(winding) > epsilon){
+            if(std::abs(winding) > epsilon){
                 inner_loop_valid[i] = false;
             }
         }
@@ -595,7 +595,7 @@ vector<plg_vertexs> Polygon::clip(const Polygon& plg){
                 loop_out_double.push_back(pair<double, double>(pt.first, pt.second));
             }
             double winding = get_winding<double>(pt, loop_out_double);
-            if(abs(winding) > epsilon){
+            if(std::abs(winding) > epsilon){
                 idx_loop_out_belonged[idx_loop_in] = idx_loop_out;
             }
             ++idx_loop_out;
@@ -657,7 +657,7 @@ pair<double, double> get_inner_point(const vector<pair<int, int>>& loop, bool &s
     }
     double epsilon = 1e-5;
     std::sort(intersects.begin(), intersects.end());
-    if(intersects.size() < 2 || abs(intersects[0] - intersects[1]) < epsilon){
+    if(intersects.size() < 2 || std::abs(intersects[0] - intersects[1]) < epsilon){
         succeed = false;
         return pair<double, double>();
     }
@@ -692,7 +692,7 @@ double get_winding_d_i(pair<double, double> pt_d, vector<pair<int, int>>& vtxs_i
 
 bool Polygon::is_pt_inside(QPointF pt){
     const double epsilon = 1e-5;
-    return abs(get_winding<int>(pair<int, int>(pt.rx(), pt.ry()), m_vertex[0])) > epsilon;
+    return std::abs(get_winding<int>(pair<int, int>(pt.rx(), pt.ry()), m_vertex[0])) > epsilon;
 }
 
 void Polygon::translate(QPointF pt){
